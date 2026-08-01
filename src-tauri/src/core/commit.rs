@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use super::branch::reject_option_like;
 use super::exec::{run_git, GitError};
 
 /// Creates a commit from whatever is currently staged.
@@ -42,6 +43,7 @@ pub fn commit_message(repo_path: &Path, hash: &str) -> Result<String, GitError> 
 
 /// Applies a commit's changes on top of HEAD as a new commit.
 pub fn cherry_pick(repo_path: &Path, hash: &str) -> Result<(), GitError> {
+    reject_option_like(hash)?;
     run_git(repo_path, &["cherry-pick", hash])?;
     Ok(())
 }
@@ -51,6 +53,7 @@ pub fn cherry_pick(repo_path: &Path, hash: &str) -> Result<(), GitError> {
 /// `--no-edit` keeps the generated message rather than opening an editor that
 /// would block on a GUI with no terminal attached.
 pub fn revert(repo_path: &Path, hash: &str) -> Result<(), GitError> {
+    reject_option_like(hash)?;
     run_git(repo_path, &["revert", "--no-edit", hash])?;
     Ok(())
 }
@@ -91,7 +94,8 @@ impl ResetMode {
 /// `ResetMode::Hard` discards uncommitted work irreversibly; the caller must
 /// confirm intent before selecting it.
 pub fn reset(repo_path: &Path, hash: &str, mode: ResetMode) -> Result<(), GitError> {
-    run_git(repo_path, &["reset", mode.as_flag(), hash])?;
+    reject_option_like(hash)?;
+    run_git(repo_path, &["reset", mode.as_flag(), hash, "--"])?;
     Ok(())
 }
 
@@ -102,15 +106,18 @@ pub fn create_tag(
     hash: &str,
     message: Option<&str>,
 ) -> Result<(), GitError> {
+    reject_option_like(name)?;
+    reject_option_like(hash)?;
     match message.filter(|m| !m.trim().is_empty()) {
-        Some(message) => run_git(repo_path, &["tag", "-a", name, "-m", message, hash])?,
-        None => run_git(repo_path, &["tag", name, hash])?,
+        Some(message) => run_git(repo_path, &["tag", "-a", "-m", message, "--", name, hash])?,
+        None => run_git(repo_path, &["tag", "--", name, hash])?,
     };
     Ok(())
 }
 
 pub fn delete_tag(repo_path: &Path, name: &str) -> Result<(), GitError> {
-    run_git(repo_path, &["tag", "-d", name])?;
+    reject_option_like(name)?;
+    run_git(repo_path, &["tag", "-d", "--", name])?;
     Ok(())
 }
 

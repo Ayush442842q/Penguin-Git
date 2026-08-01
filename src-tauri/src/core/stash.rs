@@ -8,7 +8,13 @@ use super::exec::{run_git, GitError};
 #[serde(rename_all = "camelCase")]
 pub struct Stash {
     /// Position in the stash stack; also its `stash@{index}` selector.
+    ///
+    /// Positions shift whenever an entry is added or removed, so this is a
+    /// display/selection handle only — never act on it without checking `hash`.
     pub index: usize,
+    /// The stash commit itself. Stable for the life of the entry, so it can be
+    /// used to confirm that `stash@{index}` still refers to what the UI showed.
+    pub hash: String,
     pub message: String,
     /// Branch the stash was created on.
     pub branch: String,
@@ -24,7 +30,7 @@ pub struct Stash {
 pub fn list_stashes(repo_path: &Path) -> Result<Vec<Stash>, GitError> {
     let raw = run_git(
         repo_path,
-        &["stash", "list", "--pretty=format:%gd%x00%gs%x00%at"],
+        &["stash", "list", "--pretty=format:%gd%x00%gs%x00%at%x00%H"],
     )?;
 
     Ok(raw
@@ -32,13 +38,14 @@ pub fn list_stashes(repo_path: &Path) -> Result<Vec<Stash>, GitError> {
         .filter(|l| !l.trim().is_empty())
         .enumerate()
         .map(|(index, line)| {
-            let mut fields = line.splitn(3, '\0');
+            let mut fields = line.splitn(4, '\0');
             let selector = fields.next().unwrap_or_default();
             let subject = fields.next().unwrap_or_default();
             let timestamp = fields
                 .next()
                 .and_then(|t| t.trim().parse().ok())
                 .unwrap_or(0);
+            let hash = fields.next().unwrap_or_default().trim().to_string();
 
             // `%gs` reads "WIP on main: 1a2b3c subject" or "On main: message".
             // Split the branch out of the prefix, leaving the message itself.
@@ -48,6 +55,7 @@ pub fn list_stashes(repo_path: &Path) -> Result<Vec<Stash>, GitError> {
                 // Prefer the index encoded in the selector, falling back to
                 // enumeration order if the format ever surprises us.
                 index: parse_selector_index(selector).unwrap_or(index),
+                hash,
                 message,
                 branch,
                 timestamp,
@@ -104,12 +112,43 @@ pub fn stash_diff(repo_path: &Path, index: usize) -> Result<String, GitError> {
     run_git(repo_path, &["stash", "show", "-p", "--no-color", &selector])
 }
 
+/// Confirms `stash@{index}` still points at `expected_hash` before acting on it.
+///
+/// Stash positions are not stable — every push, pop, or drop renumbers the whole
+/// stack. A UI list rendered a moment ago can therefore name an index that now
+/// refers to a *different* entry, and dropping or popping the wrong one destroys
+/// work the user never chose. The hash captured at list time is stable, so it
+/// serves as an optimistic-concurrency check: mismatch means the stack moved
+/// underneath us and the caller should refresh rather than guess.
+fn verify_stash(repo_path: &Path, index: usize, expected_hash: &str) -> Result<(), GitError> {
+    let actual = run_git(repo_path, &["rev-parse", &selector(index)])?
+        .trim()
+        .to_string();
+
+    if actual != expected_hash {
+        return Err(GitError::CommandFailed {
+            exit_code: None,
+            stderr: format!(
+                "the stash list changed since it was loaded: stash@{{{index}}} is now {}, not {}. Refresh and try again.",
+                short(&actual),
+                short(expected_hash)
+            ),
+        });
+    }
+    Ok(())
+}
+
+fn short(hash: &str) -> &str {
+    hash.get(..7).unwrap_or(hash)
+}
+
 /// Restores a stash's changes **and keeps the stash entry**.
 ///
 /// Deliberately distinct from [`pop_stash`]. Conflating the two is a real data-loss
 /// hazard: a user who expects `apply` and gets `pop` loses their safety net the
 /// moment the working tree turns out wrong.
-pub fn apply_stash(repo_path: &Path, index: usize) -> Result<(), GitError> {
+pub fn apply_stash(repo_path: &Path, index: usize, expected_hash: &str) -> Result<(), GitError> {
+    verify_stash(repo_path, index, expected_hash)?;
     run_git(repo_path, &["stash", "apply", &selector(index)])?;
     Ok(())
 }
@@ -117,13 +156,15 @@ pub fn apply_stash(repo_path: &Path, index: usize) -> Result<(), GitError> {
 /// Restores a stash's changes **and removes the stash entry**.
 ///
 /// See [`apply_stash`] — these are two different operations and must stay that way.
-pub fn pop_stash(repo_path: &Path, index: usize) -> Result<(), GitError> {
+pub fn pop_stash(repo_path: &Path, index: usize, expected_hash: &str) -> Result<(), GitError> {
+    verify_stash(repo_path, index, expected_hash)?;
     run_git(repo_path, &["stash", "pop", &selector(index)])?;
     Ok(())
 }
 
 /// Deletes a stash entry without restoring it. Irreversible.
-pub fn drop_stash(repo_path: &Path, index: usize) -> Result<(), GitError> {
+pub fn drop_stash(repo_path: &Path, index: usize, expected_hash: &str) -> Result<(), GitError> {
+    verify_stash(repo_path, index, expected_hash)?;
     run_git(repo_path, &["stash", "drop", &selector(index)])?;
     Ok(())
 }
@@ -137,6 +178,11 @@ mod tests {
     use super::*;
     use crate::core::status::get_status;
     use crate::core::test_support::FixtureRepo;
+
+    /// Current hash of `stash@{index}` — what a freshly-loaded UI list would hold.
+    fn stash_hash(repo: &FixtureRepo, index: usize) -> String {
+        list_stashes(repo.path()).expect("list")[index].hash.clone()
+    }
 
     fn repo_with_a_stash() -> FixtureRepo {
         let repo = FixtureRepo::new();
@@ -234,7 +280,7 @@ mod tests {
         let repo = repo_with_a_stash();
         assert_eq!(list_stashes(repo.path()).expect("list").len(), 1);
 
-        apply_stash(repo.path(), 0).expect("apply");
+        apply_stash(repo.path(), 0, &stash_hash(&repo, 0)).expect("apply");
 
         assert_eq!(
             list_stashes(repo.path()).expect("list").len(),
@@ -251,7 +297,7 @@ mod tests {
         let repo = repo_with_a_stash();
         assert_eq!(list_stashes(repo.path()).expect("list").len(), 1);
 
-        pop_stash(repo.path(), 0).expect("pop");
+        pop_stash(repo.path(), 0, &stash_hash(&repo, 0)).expect("pop");
 
         assert_eq!(
             list_stashes(repo.path()).expect("list").len(),
@@ -269,7 +315,7 @@ mod tests {
     fn drop_removes_a_stash_without_restoring_it() {
         let repo = repo_with_a_stash();
 
-        drop_stash(repo.path(), 0).expect("drop");
+        drop_stash(repo.path(), 0, &stash_hash(&repo, 0)).expect("drop");
 
         assert!(list_stashes(repo.path()).expect("list").is_empty());
         assert_eq!(
@@ -277,6 +323,30 @@ mod tests {
             "original\n",
             "drop must not restore the changes"
         );
+    }
+
+    #[test]
+    fn acting_on_a_stale_stash_index_is_refused() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "base\n", "Initial commit");
+        repo.write("a.txt", "first\n");
+        save_stash(repo.path(), Some("older"), false).expect("stash");
+
+        // What a UI list loaded at this moment would hold for index 0.
+        let stale_hash = stash_hash(&repo, 0);
+
+        // Another push renumbers the stack: the old entry is now index 1.
+        repo.write("a.txt", "second\n");
+        save_stash(repo.path(), Some("newer"), false).expect("stash");
+
+        // Acting on the remembered index would now hit the *newer* stash and
+        // destroy work the user never selected.
+        let err = drop_stash(repo.path(), 0, &stale_hash)
+            .expect_err("a stale index must be refused, not silently retargeted");
+        assert!(err.to_string().contains("changed since it was loaded"));
+
+        // Nothing was dropped.
+        assert_eq!(list_stashes(repo.path()).expect("list").len(), 2);
     }
 
     #[test]

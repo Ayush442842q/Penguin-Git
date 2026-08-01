@@ -60,7 +60,21 @@ pub fn run_git(cwd: &Path, args: &[&str]) -> Result<String, GitError> {
 /// this and [`run_git`] funnel through the one `Command::new("git")` below, so
 /// git invocation stays auditable in a single place.
 pub fn run_git_raw(cwd: &Path, args: &[&str]) -> Result<GitOutput, GitError> {
-    let output = Command::new("git").current_dir(cwd).args(args).output()?;
+    let output = Command::new("git")
+        .current_dir(cwd)
+        .args(args)
+        // A GUI has no terminal for git to prompt on. Left to its own devices,
+        // git blocks forever waiting for a username, a password, or an SSH
+        // passphrase, and the Tauri command never returns — the window just
+        // hangs with no way to recover. Failing fast turns that into an error
+        // the UI can show. Credential *helpers* (libsecret, store, osxkeychain)
+        // are unaffected; only interactive prompting is disabled.
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        // Without this, ssh falls back to prompting on the controlling terminal.
+        .env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
+        .output()?;
 
     Ok(GitOutput {
         // Diff and blame output can carry non-UTF-8 bytes from binary or

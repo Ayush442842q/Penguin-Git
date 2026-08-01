@@ -95,8 +95,18 @@
   flex-shrink: 0;
 }
 
-.sidebar-row:hover .row-actions {
+/* Revealed on hover *and* on keyboard focus. Without the focus-within rule a
+   keyboard user tabs onto an invisible delete button with no indication of
+   where they are. */
+.sidebar-row:hover .row-actions,
+.sidebar-row:focus-within .row-actions {
   opacity: 1;
+}
+
+.row-actions button:focus-visible,
+.file-actions button:focus-visible {
+  outline: 2px solid var(--accent-purple);
+  outline-offset: 1px;
 }
 
 .row-actions button {

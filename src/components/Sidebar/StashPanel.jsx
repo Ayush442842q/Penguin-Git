@@ -74,7 +74,7 @@ export default function StashPanel() {
                 className="ghost"
                 disabled={busy}
                 title="Apply — restore these changes and keep the stash"
-                onClick={() => run((path) => git.applyStash(path, stash.index))}
+                onClick={() => run((path) => git.applyStash(path, stash.index, stash.hash))}
               >
                 Apply
               </button>
@@ -82,7 +82,7 @@ export default function StashPanel() {
                 className="ghost"
                 disabled={busy}
                 title="Pop — restore these changes and remove the stash"
-                onClick={() => run((path) => git.popStash(path, stash.index))}
+                onClick={() => run((path) => git.popStash(path, stash.index, stash.hash))}
               >
                 Pop
               </button>
@@ -92,7 +92,7 @@ export default function StashPanel() {
                 title="Drop — delete this stash without restoring it"
                 onClick={() => {
                   if (confirm(`Drop stash "${stash.message}"? This cannot be undone.`)) {
-                    run((path) => git.dropStash(path, stash.index));
+                    run((path) => git.dropStash(path, stash.index, stash.hash));
                   }
                 }}
               >

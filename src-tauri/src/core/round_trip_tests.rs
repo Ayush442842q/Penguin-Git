@@ -132,8 +132,10 @@ fn stash_then_restore_then_commit() {
         .is_clean());
     assert_eq!(stash::list_stashes(fixture.path()).expect("list").len(), 1);
 
-    // Apply keeps the entry, so the safety net is still there.
-    stash::apply_stash(fixture.path(), 0).expect("apply");
+    // Apply keeps the entry, so the safety net is still there. The hash comes
+    // from the listing, exactly as the UI supplies it.
+    let entry = stash::list_stashes(fixture.path()).expect("list")[0].clone();
+    stash::apply_stash(fixture.path(), entry.index, &entry.hash).expect("apply");
     assert_eq!(
         stash::list_stashes(fixture.path()).expect("list").len(),
         1,
@@ -144,7 +146,8 @@ fn stash_then_restore_then_commit() {
     commit::commit(fixture.path(), "Finish the work", None, false).expect("commit");
 
     // Now the stash is genuinely redundant and can be dropped.
-    stash::drop_stash(fixture.path(), 0).expect("drop");
+    let entry = stash::list_stashes(fixture.path()).expect("list")[0].clone();
+    stash::drop_stash(fixture.path(), entry.index, &entry.hash).expect("drop");
     assert!(stash::list_stashes(fixture.path())
         .expect("list")
         .is_empty());

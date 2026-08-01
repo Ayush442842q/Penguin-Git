@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRepoStore } from "../../store/repoStore";
 import * as git from "../../services/tauriBridge";
 import "./StagingPanel.css";
@@ -44,6 +44,7 @@ function Section({ title, entries, children }) {
 }
 
 export default function StagingPanel() {
+  const repo = useRepoStore((s) => s.repo);
   const status = useRepoStore((s) => s.status);
   const busy = useRepoStore((s) => s.busy);
   const run = useRepoStore((s) => s.run);
@@ -53,6 +54,29 @@ export default function StagingPanel() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [amend, setAmend] = useState(false);
+
+  // Amending without the previous message pre-filled means retyping it from
+  // memory, and an empty box silently replaces a good message with a worse one.
+  useEffect(() => {
+    if (!amend || !repo) return;
+    let cancelled = false;
+
+    git
+      .getCommitMessage(repo.path, "HEAD")
+      .then((message) => {
+        if (cancelled) return;
+        const [first, ...rest] = message.split("\n");
+        setSubject(first ?? "");
+        setBody(rest.join("\n").trim());
+      })
+      .catch(() => {
+        // No commits yet, or HEAD unreadable — leave the box as the user left it.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [amend, repo]);
 
   if (!status) return null;
 

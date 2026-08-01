@@ -16,9 +16,24 @@
   border-color: var(--border-muted);
 }
 
+/* Owns layout, not scrolling. The virtualized diff and blame views scroll
+   themselves — two nested scroll containers would leave the virtualizer
+   listening to the outer one while the inner one actually moves, so it would
+   keep rendering the first screenful no matter where the user scrolled. */
 .diff-scroll {
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Non-virtualized children still need to scroll on their own. */
+.diff-scroll > .history-list,
+.diff-scroll > .diff-empty {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .diff-empty {
@@ -26,16 +41,36 @@
   font-size: 12px;
 }
 
-.diff-body {
+.diff-body,
+.blame-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   font-family: var(--font-mono);
   font-size: 12px;
-  line-height: 1.55;
+}
+
+.diff-virtual {
+  position: relative;
+  width: 100%;
 }
 
 .diff-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   padding: 0 14px;
-  white-space: pre-wrap;
-  word-break: break-word;
+  line-height: 20px;
+  white-space: pre;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-row:focus-visible,
+.graph-row:focus-visible {
+  outline: 2px solid var(--accent-purple);
+  outline-offset: -2px;
 }
 
 .diff-add {
@@ -65,16 +100,16 @@
 /* Blame                                                               */
 /* ------------------------------------------------------------------ */
 
-.blame-body {
-  font-size: 12px;
-}
-
 .blame-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border-bottom: 1px solid rgba(30, 34, 48, 0.4);
+  line-height: 20px;
 }
 
 .blame-line:hover {

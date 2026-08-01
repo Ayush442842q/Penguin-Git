@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRepoStore } from "../../store/repoStore";
 import * as git from "../../services/tauriBridge";
 import { WIP_ROW_HASH } from "../CommitGraph/CommitGraph";
@@ -20,17 +21,43 @@ function lineClass(line) {
   return "diff-context";
 }
 
+const DIFF_LINE_HEIGHT = 20;
+
+/**
+ * Unified diff, virtualized.
+ *
+ * A large commit runs to tens of thousands of lines. Rendering one element per
+ * line builds that many DOM nodes in a single synchronous pass and freezes the
+ * webview, so only the visible window is mounted — the same approach the commit
+ * graph already uses.
+ */
 function UnifiedDiff({ text }) {
+  const scrollRef = useRef(null);
+  const lines = useMemo(() => (text ? text.split("\n") : []), [text]);
+
+  const virtualizer = useVirtualizer({
+    count: lines.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => DIFF_LINE_HEIGHT,
+    overscan: 30,
+  });
+
   if (!text?.trim()) return <p className="diff-empty text-muted">No changes to show.</p>;
 
   return (
-    <pre className="diff-body">
-      {text.split("\n").map((line, index) => (
-        <div key={index} className={`diff-line ${lineClass(line)}`}>
-          {line || " "}
-        </div>
-      ))}
-    </pre>
+    <div className="diff-body" ref={scrollRef}>
+      <div className="diff-virtual" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        {virtualizer.getVirtualItems().map((row) => (
+          <div
+            key={row.index}
+            className={`diff-line ${lineClass(lines[row.index])}`}
+            style={{ height: `${DIFF_LINE_HEIGHT}px`, transform: `translateY(${row.start}px)` }}
+          >
+            {lines[row.index] || " "}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -50,21 +77,40 @@ function formatDate(seconds) {
  * for this phase.
  */
 function BlameView({ lines }) {
+  const scrollRef = useRef(null);
+
+  // Same reasoning as UnifiedDiff — a long source file is just as unbounded.
+  const virtualizer = useVirtualizer({
+    count: lines?.length ?? 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => DIFF_LINE_HEIGHT,
+    overscan: 30,
+  });
+
   if (!lines?.length) return <p className="diff-empty text-muted">No blame data.</p>;
 
   return (
-    <div className="blame-body">
-      {lines.map((line) => (
-        <div key={line.lineNumber} className="blame-line">
-          <span className="blame-hash mono text-dim" title={line.summary}>
-            {line.hash.slice(0, 7)}
-          </span>
-          <span className="blame-author truncate text-muted">{line.authorName}</span>
-          <span className="blame-date text-dim">{formatDate(line.timestamp)}</span>
-          <span className="blame-number text-dim">{line.lineNumber}</span>
-          <pre className="blame-content">{line.content || " "}</pre>
-        </div>
-      ))}
+    <div className="blame-body" ref={scrollRef}>
+      <div className="diff-virtual" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        {virtualizer.getVirtualItems().map((row) => {
+          const line = lines[row.index];
+          return (
+            <div
+              key={line.lineNumber}
+              className="blame-line"
+              style={{ height: `${DIFF_LINE_HEIGHT}px`, transform: `translateY(${row.start}px)` }}
+            >
+              <span className="blame-hash mono text-dim" title={line.summary}>
+                {line.hash.slice(0, 7)}
+              </span>
+              <span className="blame-author truncate text-muted">{line.authorName}</span>
+              <span className="blame-date text-dim">{formatDate(line.timestamp)}</span>
+              <span className="blame-number text-dim">{line.lineNumber}</span>
+              <pre className="blame-content">{line.content || " "}</pre>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -75,7 +121,19 @@ function HistoryView({ commits, onSelect }) {
   return (
     <ul className="history-list">
       {commits.map((commit) => (
-        <li key={commit.hash} className="history-row" onClick={() => onSelect(commit.hash)}>
+        <li
+          key={commit.hash}
+          className="history-row"
+          role="button"
+          tabIndex={0}
+          onClick={() => onSelect(commit.hash)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onSelect(commit.hash);
+            }
+          }}
+        >
           <span className="history-hash mono text-dim">{commit.shortHash}</span>
           <span className="history-subject truncate">{commit.subject}</span>
           <span className="history-author truncate text-muted">{commit.authorName}</span>
