@@ -43,16 +43,51 @@ impl FixtureRepo {
     /// Writes `contents` to `relative_path`, stages it, and commits it with
     /// `message`. Returns the resulting commit hash.
     pub fn commit(&self, relative_path: &str, contents: &str, message: &str) -> String {
+        self.write(relative_path, contents);
+        run(self.dir.path(), &["add", relative_path]);
+        self.commit_all(message)
+    }
+
+    /// Writes `contents` to `relative_path` without staging or committing it.
+    pub fn write(&self, relative_path: &str, contents: &str) {
         let target = self.file_path(relative_path);
         if let Some(parent) = target.parent() {
             std::fs::create_dir_all(parent).expect("failed to create parent dirs in fixture repo");
         }
         std::fs::write(&target, contents).expect("failed to write fixture file");
-        run(self.dir.path(), &["add", relative_path]);
-        run(self.dir.path(), &["commit", "-m", message]);
+    }
+
+    /// Commits whatever is currently staged. Returns the resulting commit hash.
+    ///
+    /// `--allow-empty` so tests can create merge/branch topology without having
+    /// to invent file changes they don't care about.
+    pub fn commit_all(&self, message: &str) -> String {
+        run(self.dir.path(), &["commit", "--allow-empty", "-m", message]);
+        self.head()
+    }
+
+    pub fn head(&self) -> String {
         run(self.dir.path(), &["rev-parse", "HEAD"])
             .trim()
             .to_string()
+    }
+
+    /// Runs an arbitrary git command against the fixture, returning stdout.
+    /// Test setup only — production code goes through `super::exec::run_git`.
+    pub fn git(&self, args: &[&str]) -> String {
+        run(self.dir.path(), args)
+    }
+
+    /// Adds a real remote pointing at a second bare repository, so tests can
+    /// exercise upstream-tracking, ahead/behind, and fetch/push paths without
+    /// touching the network. Returns the bare repo's `TempDir`, which the
+    /// caller must keep alive for as long as the remote is used.
+    pub fn add_bare_remote(&self, name: &str) -> TempDir {
+        let bare = TempDir::new().expect("failed to create tempdir for bare remote");
+        run(bare.path(), &["init", "--bare", "--initial-branch=main"]);
+        let url = bare.path().to_string_lossy().to_string();
+        run(self.dir.path(), &["remote", "add", name, &url]);
+        bare
     }
 }
 

@@ -1,0 +1,161 @@
+.diff-viewer {
+  flex: 1;
+  min-width: 0;
+  border-right: none;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.diff-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.diff-tabs button.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+  border-color: var(--border-muted);
+}
+
+.diff-scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+.diff-empty {
+  padding: 20px 14px;
+  font-size: 12px;
+}
+
+.diff-body {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.diff-line {
+  padding: 0 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diff-add {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-green);
+}
+
+.diff-del {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+}
+
+.diff-hunk {
+  background: var(--bg-elevated);
+  color: var(--accent-cyan);
+}
+
+.diff-meta {
+  color: var(--text-dim);
+}
+
+.diff-context {
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Blame                                                               */
+/* ------------------------------------------------------------------ */
+
+.blame-body {
+  font-size: 12px;
+}
+
+.blame-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(30, 34, 48, 0.4);
+}
+
+.blame-line:hover {
+  background: var(--bg-hover);
+}
+
+.blame-hash {
+  width: 58px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.blame-author {
+  width: 110px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.blame-date {
+  width: 90px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.blame-number {
+  width: 40px;
+  flex-shrink: 0;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.blame-content {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* File history                                                        */
+/* ------------------------------------------------------------------ */
+
+.history-list {
+  list-style: none;
+}
+
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(30, 34, 48, 0.4);
+}
+
+.history-row:hover {
+  background: var(--bg-hover);
+}
+
+.history-hash {
+  width: 58px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.history-subject {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-author {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.history-date {
+  width: 92px;
+  flex-shrink: 0;
+  font-size: 11px;
+}

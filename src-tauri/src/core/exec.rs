@@ -19,6 +19,20 @@ pub enum GitError {
     InvalidUtf8(#[from] std::string::FromUtf8Error),
 }
 
+/// A completed git invocation, including runs that exited non-zero.
+#[derive(Debug, Clone)]
+pub struct GitOutput {
+    pub stdout: String,
+    pub stderr: String,
+    pub exit_code: Option<i32>,
+}
+
+impl GitOutput {
+    pub fn success(&self) -> bool {
+        self.exit_code == Some(0)
+    }
+}
+
 /// Runs `git <args>` in `cwd` and returns stdout on success.
 ///
 /// On a non-zero exit code, returns `GitError::CommandFailed` carrying the
@@ -26,16 +40,36 @@ pub enum GitError {
 /// re-parse stderr text to distinguish failure modes; add a more specific
 /// variant here if a later phase needs to branch on a particular git error.
 pub fn run_git(cwd: &Path, args: &[&str]) -> Result<String, GitError> {
-    let output = Command::new("git").current_dir(cwd).args(args).output()?;
+    let output = run_git_raw(cwd, args)?;
 
-    if output.status.success() {
-        Ok(String::from_utf8(output.stdout)?)
+    if output.success() {
+        Ok(output.stdout)
     } else {
         Err(GitError::CommandFailed {
-            exit_code: output.status.code(),
-            stderr: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+            exit_code: output.exit_code,
+            stderr: output.stderr,
         })
     }
+}
+
+/// Runs `git <args>` and hands back the result whatever the exit code.
+///
+/// For the subcommands where a non-zero exit is a *result* rather than a
+/// failure — `diff` with `--exit-code`/`--no-index` exits 1 to mean "there are
+/// differences", `merge` exits 1 on conflicts — and stdout still matters. Both
+/// this and [`run_git`] funnel through the one `Command::new("git")` below, so
+/// git invocation stays auditable in a single place.
+pub fn run_git_raw(cwd: &Path, args: &[&str]) -> Result<GitOutput, GitError> {
+    let output = Command::new("git").current_dir(cwd).args(args).output()?;
+
+    Ok(GitOutput {
+        // Diff and blame output can carry non-UTF-8 bytes from binary or
+        // legacy-encoded files; lossy conversion keeps those readable instead
+        // of failing the whole operation.
+        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+        stderr: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        exit_code: output.status.code(),
+    })
 }
 
 #[cfg(test)]

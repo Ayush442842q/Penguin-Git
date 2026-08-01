@@ -4,7 +4,7 @@ PenguinGit is being built into a full local-first, Linux-native clone of GitKrak
 
 This is a living document. Check the boxes off as phases land; update the status column as work progresses.
 
-**Last updated:** 2026-08-01 · **Current phase:** 0 complete, 1 next (Core git engine & core UI)
+**Last updated:** 2026-08-01 · **Current phase:** 0 and 1 complete, 2 next (Conflicts, rebase, undo/redo)
 
 ## Guiding principles
 
@@ -19,8 +19,8 @@ This is a living document. Check the boxes off as phases land; update the status
 | #   | Phase                                          | Goal                                                                                                                                                                   | Status         |
 | --- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | 0   | Scaffolding & CI                               | Tooling, linting, testing, and CI foundation before any feature code                                                                                                   | ✅ Done        |
-| 1   | Core git engine & core UI                      | Status, staging, commit, log/graph, diff, branches, stash — done correctly, with a proper DAG lane-layout algorithm and no fragile text-parsing                        | 🔜 Next        |
-| 2   | Merge conflicts, interactive rebase, undo/redo | The three hardest, most differentiating git UX flows                                                                                                                   | 🔜 Not started |
+| 1   | Core git engine & core UI                      | Status, staging, commit, log/graph, diff, branches, stash — done correctly, with a proper DAG lane-layout algorithm and no fragile text-parsing                        | ✅ Done        |
+| 2   | Merge conflicts, interactive rebase, undo/redo | The three hardest, most differentiating git UX flows                                                                                                                   | 🔜 Next        |
 | 3   | Multi-repo architecture & submodules           | Tabs, recent-repos, and submodule support (worktree support designed, not yet implemented)                                                                             | 🔜 Not started |
 | 4   | GitKraken MCP server                           | Standalone + embeddable MCP server over the shared core library, with live bidirectional events back to the GUI                                                        | 🔜 Not started |
 | 5   | AI features (bring-your-own key)               | Compose commits, explain commits/branches, PR descriptions — using your own Anthropic/OpenAI key                                                                       | 🔜 Not started |
@@ -38,9 +38,19 @@ This is a living document. Check the boxes off as phases land; update the status
 - [x] Empty `src-tauri/src/commands/` adapter layer, so the core/adapter split is structural from the first commit
 - [x] GitHub Actions CI (lint/format/test, both frontend and backend)
 
-### Phase 1 — next
+### Phase 1 — done ✅
 
-Scope: `core::{repo,status,log,diff,stage,commit,branch,remote,stash,watcher}`, a zustand frontend store subscribed to a `repo-changed` event, a native folder picker, and the commit graph rebuilt on a correct DAG lane-layout algorithm (unit-tested against synthetic DAGs — linear, single merge, octopus merge, diverged-then-remerged, orphan branch).
+- [x] `core::{repo,status,log,diff,stage,commit,branch,remote,stash,watcher}` over the shared `run_git()` helper
+- [x] A pure DAG lane-layout algorithm, unit-tested against synthetic graphs (linear, single merge, octopus merge, diverged-then-remerged, orphan branch, interleaved long-running branches) and a real multi-merge repository
+- [x] `notify` filesystem watcher emitting `repo-changed`, debounced — no polling anywhere in the app
+- [x] zustand store + typed `invoke()` wrappers; native folder picker and recent-repositories list
+- [x] Commit graph with virtualized rows, WIP pseudo-commit, context menu, and search/filter
+- [x] Diff viewer with unified diff, file history, and blame annotations; staging, branch, and stash panels
+- [x] 73 Rust tests and 6 frontend tests
+
+### Phase 2 — next
+
+Scope: a merge-conflict resolver whose resolutions are actually written to disk and staged (the prototype computed a result and discarded it), a visual interactive rebase built on a sequence-editor shim, and an undo/redo action journal.
 
 See [CHANGELOG.md](CHANGELOG.md) for the detailed record of what shipped.
 
