@@ -71,9 +71,16 @@ pub fn run_git_raw(cwd: &Path, args: &[&str]) -> Result<GitOutput, GitError> {
         // are unaffected; only interactive prompting is disabled.
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GIT_ASKPASS", "")
+        // Stops ssh reaching for a graphical passphrase prompt. Deliberately
+        // *not* `GIT_SSH_COMMAND`: that environment variable takes precedence
+        // over the user's `core.sshCommand`, so forcing `ssh -oBatchMode=yes`
+        // would silently discard a configured wrapper, proxy command, chosen
+        // identity file, or non-OpenSSH client — breaking the very thing this
+        // project promises to respect. Enforcing non-interactivity is enough;
+        // replacing the transport is not ours to do. With no controlling
+        // terminal and no askpass, ssh fails fast rather than hanging.
         .env("SSH_ASKPASS", "")
-        // Without this, ssh falls back to prompting on the controlling terminal.
-        .env("GIT_SSH_COMMAND", "ssh -oBatchMode=yes")
+        .env("SSH_ASKPASS_REQUIRE", "never")
         .output()?;
 
     Ok(GitOutput {
@@ -109,6 +116,22 @@ mod tests {
             }
             other => panic!("expected CommandFailed, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn a_configured_ssh_command_is_left_intact() {
+        // The whole point of shelling out to system git is that the user's own
+        // configuration keeps working. Overriding `core.sshCommand` — which is
+        // what setting `GIT_SSH_COMMAND` would do — silently breaks custom keys,
+        // proxy commands, and non-OpenSSH clients.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        repo.git(&["config", "core.sshCommand", "/usr/bin/my-custom-ssh -v"]);
+
+        let configured = run_git(repo.path(), &["config", "--get", "core.sshCommand"])
+            .expect("reading the config back should succeed");
+
+        assert_eq!(configured.trim(), "/usr/bin/my-custom-ssh -v");
     }
 
     #[test]

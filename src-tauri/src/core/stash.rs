@@ -120,6 +120,16 @@ pub fn stash_diff(repo_path: &Path, index: usize) -> Result<String, GitError> {
 /// work the user never chose. The hash captured at list time is stable, so it
 /// serves as an optimistic-concurrency check: mismatch means the stack moved
 /// underneath us and the caller should refresh rather than guess.
+///
+/// Known limitation: this is a check-then-act, not an atomic operation. A stash
+/// entry is a reflog entry on `refs/stash`, and git exposes no compare-and-swap
+/// for one — `update-ref` can guard a ref's value, but not a reflog position.
+/// Closing the window entirely would mean manipulating the reflog directly
+/// instead of shelling out to `git stash`, which is the opposite of this
+/// project's architecture. What the check does eliminate is the realistic
+/// failure: a UI list that has been stale for seconds or minutes. What remains
+/// is the microsecond gap between two subprocesses, and only if another git
+/// process is mutating the same stack concurrently.
 fn verify_stash(repo_path: &Path, index: usize, expected_hash: &str) -> Result<(), GitError> {
     let actual = run_git(repo_path, &["rev-parse", &selector(index)])?
         .trim()
