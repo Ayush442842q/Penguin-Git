@@ -1,0 +1,40 @@
+/* Phase 0 placeholder shell styles — replaced by the real app shell in Phase 1. */
+
+.phase0-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-base);
+}
+
+.phase0-title {
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.phase0-tagline {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.phase0-status {
+  margin-top: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: var(--accent-cyan);
+  background: var(--cyan-dim);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: var(--r-sm);
+}
