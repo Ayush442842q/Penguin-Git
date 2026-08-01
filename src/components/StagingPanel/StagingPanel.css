@@ -84,7 +84,9 @@
   flex-shrink: 0;
 }
 
+/* See Sidebar.css — focus must reveal these too, not just hover. */
 .file-row:hover .file-actions,
+.file-row:focus-within .file-actions,
 .file-row.selected .file-actions {
   opacity: 1;
 }

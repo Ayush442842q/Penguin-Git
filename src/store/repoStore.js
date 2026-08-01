@@ -74,7 +74,10 @@ export const useRepoStore = create((set, get) => ({
       await get().refresh();
       return true;
     } catch (error) {
-      set({ error: String(error), repo: null });
+      // Only report the failure. Clearing `repo` here would close the working
+      // repository because the user mistyped a *different* path — losing their
+      // place for an error that had nothing to do with it.
+      set({ error: String(error) });
       return false;
     } finally {
       set({ loading: false });
@@ -112,6 +115,7 @@ export const useRepoStore = create((set, get) => ({
   refresh: async () => {
     const { repo } = get();
     if (!repo) return;
+    const requestedFor = repo.id;
 
     try {
       const [status, graph, branches, remotes, stashes] = await Promise.all([
@@ -121,6 +125,12 @@ export const useRepoStore = create((set, get) => ({
         git.getRemotes(repo.path),
         git.getStashes(repo.path),
       ]);
+
+      // The user can switch or close the repository while these are in flight.
+      // Writing anyway would paint one repository's commits, branches, and
+      // stashes over another's — and the stash indices would then point into
+      // the wrong stack.
+      if (get().repo?.id !== requestedFor) return;
 
       set({
         status,
@@ -132,6 +142,7 @@ export const useRepoStore = create((set, get) => ({
         error: null,
       });
     } catch (error) {
+      if (get().repo?.id !== requestedFor) return;
       set({ error: String(error) });
     }
   },
@@ -147,13 +158,15 @@ export const useRepoStore = create((set, get) => ({
     const { repo } = get();
     if (!repo) return false;
 
+    const requestedFor = repo.id;
     set({ busy: true, error: null });
     try {
       await operation(repo.path);
+      if (get().repo?.id !== requestedFor) return false;
       await get().refresh();
       return true;
     } catch (error) {
-      set({ error: String(error) });
+      if (get().repo?.id === requestedFor) set({ error: String(error) });
       return false;
     } finally {
       set({ busy: false });

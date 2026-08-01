@@ -273,7 +273,17 @@ export default function CommitGraph() {
                     height: `${ROW_HEIGHT}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => selectCommit(commit.hash)}
+                  onKeyDown={(event) => {
+                    // Selecting a commit drives the diff panel, so this is the
+                    // primary workflow — it can't be mouse-only.
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      selectCommit(commit.hash);
+                    }
+                  }}
                   onContextMenu={(event) => handleContextMenu(event, entry)}
                 >
                   <svg

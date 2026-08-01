@@ -138,7 +138,10 @@ pub fn parse_porcelain_v2(raw: &str) -> RepoStatus {
                 }
             }
             Some('u') => {
-                if let Some(path) = record.split(' ').nth(10) {
+                // `splitn(11, ..)` so the 11th field keeps the rest of the record
+                // intact. A plain `split(' ').nth(10)` stops at the first space
+                // *inside* the path, silently truncating "src/my file.txt".
+                if let Some(path) = record.splitn(11, ' ').nth(10) {
                     status
                         .conflicted
                         .push(FileEntry::new(path, ChangeKind::Conflicted));
@@ -364,6 +367,18 @@ mod tests {
         assert_eq!(status.upstream.as_deref(), Some("origin/main"));
         assert_eq!(status.ahead, 3);
         assert_eq!(status.behind, 5);
+    }
+
+    #[test]
+    fn conflicted_paths_with_spaces_are_not_truncated() {
+        // An unmerged record: `u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>`.
+        // The path is the 11th space-separated field and may itself contain spaces.
+        let raw = "u UU N... 100644 100644 100644 100644 aaa bbb ccc src/my conflicted file.txt\0";
+
+        let status = parse_porcelain_v2(raw);
+
+        assert_eq!(status.conflicted.len(), 1);
+        assert_eq!(status.conflicted[0].path, "src/my conflicted file.txt");
     }
 
     #[test]

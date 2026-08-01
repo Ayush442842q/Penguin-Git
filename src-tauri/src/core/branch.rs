@@ -31,7 +31,7 @@ pub fn list_branches(repo_path: &Path) -> Result<Vec<Branch>, GitError> {
         repo_path,
         &[
             "for-each-ref",
-            "--format=%(refname:short)%00%(objectname)%00%(upstream:short)%00%(HEAD)%00%(contents:subject)",
+            "--format=%(refname)%00%(refname:short)%00%(objectname)%00%(upstream:short)%00%(HEAD)%00%(contents:subject)",
             "refs/heads",
             "refs/remotes",
         ],
@@ -39,21 +39,32 @@ pub fn list_branches(repo_path: &Path) -> Result<Vec<Branch>, GitError> {
 
     let mut branches = Vec::new();
     for line in raw.lines().filter(|l| !l.trim().is_empty()) {
-        let mut fields = line.splitn(5, '\0');
-        let (Some(name), Some(tip), Some(upstream), Some(head_marker)) =
-            (fields.next(), fields.next(), fields.next(), fields.next())
-        else {
+        let mut fields = line.splitn(6, '\0');
+        let (Some(full_ref), Some(name), Some(tip), Some(upstream), Some(head_marker)) = (
+            fields.next(),
+            fields.next(),
+            fields.next(),
+            fields.next(),
+            fields.next(),
+        ) else {
             continue;
         };
         let subject = fields.next().unwrap_or_default().to_string();
 
+        // The namespace is authoritative. The short name isn't: a local branch
+        // may legally be called `origin/main`, which is indistinguishable from
+        // the remote-tracking ref of the same name once the namespace is
+        // stripped. Reading `%(refname)` also avoids spawning a `show-ref` probe
+        // per branch on the request path.
+        let is_remote = full_ref.starts_with("refs/remotes/");
+
         // git lists the symbolic `origin/HEAD` alongside real branches; it's a
-        // pointer, not something a user can check out meaningfully.
-        if name.ends_with("/HEAD") {
+        // pointer, not something a user can check out meaningfully. Scoped to
+        // remotes so a local branch named `foo/HEAD` isn't swallowed too.
+        if is_remote && full_ref.ends_with("/HEAD") {
             continue;
         }
 
-        let is_remote = name.contains('/') && !upstream_is_local(repo_path, name);
         let upstream = (!upstream.is_empty()).then(|| upstream.to_string());
 
         let (ahead, behind) = match &upstream {
@@ -82,12 +93,20 @@ pub fn list_branches(repo_path: &Path) -> Result<Vec<Branch>, GitError> {
     Ok(branches)
 }
 
-/// Distinguishes a local branch containing a slash (`feature/login`) from a
-/// remote-tracking one (`origin/main`) by asking git which refs actually exist
-/// locally, rather than guessing from the name.
-fn upstream_is_local(repo_path: &Path, name: &str) -> bool {
-    let ref_path = format!("refs/heads/{name}");
-    run_git(repo_path, &["show-ref", "--verify", "--quiet", &ref_path]).is_ok()
+/// Rejects a ref or branch name that git would parse as an option.
+///
+/// A trailing `--` separates revisions from paths, but it does *not* stop git
+/// reading a leading-dash value as a flag — `--` only helps for arguments that
+/// come after it. Anything user- or repository-supplied is screened here before
+/// it reaches the command line.
+pub(crate) fn reject_option_like(value: &str) -> Result<(), GitError> {
+    if value.starts_with('-') {
+        return Err(GitError::CommandFailed {
+            exit_code: None,
+            stderr: format!("refusing to pass {value:?} to git: names beginning with '-' are ambiguous with options"),
+        });
+    }
+    Ok(())
 }
 
 /// Exact divergence between two refs.
@@ -117,8 +136,12 @@ pub fn create_branch(
     name: &str,
     start_point: Option<&str>,
 ) -> Result<(), GitError> {
+    reject_option_like(name)?;
     match start_point {
-        Some(start) => run_git(repo_path, &["branch", "--", name, start])?,
+        Some(start) => {
+            reject_option_like(start)?;
+            run_git(repo_path, &["branch", "--", name, start])?
+        }
         None => run_git(repo_path, &["branch", "--", name])?,
     };
     Ok(())
@@ -126,18 +149,28 @@ pub fn create_branch(
 
 /// Deletes a branch. `force` allows deleting one that isn't fully merged.
 pub fn delete_branch(repo_path: &Path, name: &str, force: bool) -> Result<(), GitError> {
+    reject_option_like(name)?;
     let flag = if force { "-D" } else { "-d" };
     run_git(repo_path, &["branch", flag, "--", name])?;
     Ok(())
 }
 
 pub fn rename_branch(repo_path: &Path, old: &str, new: &str) -> Result<(), GitError> {
-    run_git(repo_path, &["branch", "-m", old, new])?;
+    reject_option_like(old)?;
+    reject_option_like(new)?;
+    run_git(repo_path, &["branch", "-m", "--", old, new])?;
     Ok(())
 }
 
+/// Switches to `target`.
+///
+/// The trailing `--` matters more here than anywhere else: without it, a
+/// `target` that also matches a working-tree path makes git restore that path
+/// from the index instead of switching branches, discarding the user's edits to
+/// it with no confirmation.
 pub fn checkout(repo_path: &Path, target: &str) -> Result<(), GitError> {
-    run_git(repo_path, &["checkout", target])?;
+    reject_option_like(target)?;
+    run_git(repo_path, &["checkout", target, "--"])?;
     Ok(())
 }
 
@@ -147,9 +180,13 @@ pub fn checkout_new(
     name: &str,
     start_point: Option<&str>,
 ) -> Result<(), GitError> {
+    reject_option_like(name)?;
     match start_point {
-        Some(start) => run_git(repo_path, &["checkout", "-b", name, start])?,
-        None => run_git(repo_path, &["checkout", "-b", name])?,
+        Some(start) => {
+            reject_option_like(start)?;
+            run_git(repo_path, &["checkout", "-b", name, start, "--"])?
+        }
+        None => run_git(repo_path, &["checkout", "-b", name, "--"])?,
     };
     Ok(())
 }
@@ -159,12 +196,14 @@ pub fn checkout_new(
 /// `--no-edit` keeps git's generated merge message instead of launching an
 /// editor, which has no terminal to attach to in a GUI.
 pub fn merge_branch(repo_path: &Path, branch: &str) -> Result<(), GitError> {
+    reject_option_like(branch)?;
     run_git(repo_path, &["merge", "--no-edit", branch])?;
     Ok(())
 }
 
 /// Replays the current branch on top of `onto`.
 pub fn rebase_onto(repo_path: &Path, onto: &str) -> Result<(), GitError> {
+    reject_option_like(onto)?;
     run_git(repo_path, &["rebase", onto])?;
     Ok(())
 }

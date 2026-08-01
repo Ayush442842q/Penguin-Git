@@ -152,10 +152,15 @@ export const saveStash = (repoPath, message, includeUntracked = true) =>
 
 export const getStashDiff = (repoPath, index) => invoke("get_stash_diff", { repoPath, index });
 
+// Stash positions renumber on every push/pop/drop, so each of these also sends
+// the hash the UI list was showing. The backend refuses the operation if the
+// stack moved underneath us rather than acting on whatever now sits at `index`.
+
 /** Restores the stash and keeps it — deliberately not the same as {@link popStash}. */
-export const applyStash = (repoPath, index) => invoke("apply_stash", { repoPath, index });
+export const applyStash = (repoPath, index, hash) =>
+  invoke("apply_stash", { repoPath, index, hash });
 
 /** Restores the stash and removes it — deliberately not the same as {@link applyStash}. */
-export const popStash = (repoPath, index) => invoke("pop_stash", { repoPath, index });
+export const popStash = (repoPath, index, hash) => invoke("pop_stash", { repoPath, index, hash });
 
-export const dropStash = (repoPath, index) => invoke("drop_stash", { repoPath, index });
+export const dropStash = (repoPath, index, hash) => invoke("drop_stash", { repoPath, index, hash });

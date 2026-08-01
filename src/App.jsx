@@ -69,10 +69,13 @@ function Header() {
         {busy && <span className="text-dim">working…</span>}
       </div>
       <div className="app-header-right">
-        <button className="ghost" onClick={openRepoViaPicker}>
+        {/* Disabled while a git operation is running: switching or closing the
+            repository mid-write leaves the UI describing one repo and the
+            operation finishing against another. */}
+        <button className="ghost" disabled={busy} onClick={openRepoViaPicker}>
           Open…
         </button>
-        <button className="ghost" onClick={closeRepo}>
+        <button className="ghost" disabled={busy} onClick={closeRepo}>
           Close
         </button>
       </div>

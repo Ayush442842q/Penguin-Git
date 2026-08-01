@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+
+/** Keeps the menu fully on screen when opened near an edge. */
+const VIEWPORT_MARGIN = 8;
 
 /**
  * Right-click actions for a commit.
@@ -21,6 +24,20 @@ export default function CommitContextMenu({
   const ref = useRef(null);
   const [prompt, setPrompt] = useState(null);
   const [value, setValue] = useState("");
+  const [position, setPosition] = useState({ top: y, left: x });
+
+  // Measure after mount and pull the menu back inside the viewport. Opened on a
+  // row near the bottom or right edge it would otherwise render partly offscreen,
+  // with the destructive reset actions the first thing to be cut off.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    setPosition({
+      top: Math.max(VIEWPORT_MARGIN, Math.min(y, window.innerHeight - height - VIEWPORT_MARGIN)),
+      left: Math.max(VIEWPORT_MARGIN, Math.min(x, window.innerWidth - width - VIEWPORT_MARGIN)),
+    });
+  }, [x, y, prompt]);
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -55,7 +72,7 @@ export default function CommitContextMenu({
     <div
       ref={ref}
       className="context-menu fade-in"
-      style={{ top: y, left: x }}
+      style={{ top: position.top, left: position.left }}
       role="menu"
       onContextMenu={(event) => event.preventDefault()}
     >
@@ -102,7 +119,22 @@ export default function CommitContextMenu({
           <button type="button" role="menuitem" onClick={() => onReset("mixed")}>
             Reset — mixed <span className="text-dim">(keep changes unstaged)</span>
           </button>
-          <button type="button" role="menuitem" className="danger" onClick={() => onReset("hard")}>
+          <button
+            type="button"
+            role="menuitem"
+            className="danger"
+            onClick={() => {
+              // The only menu action that destroys uncommitted work outright,
+              // with nothing in the reflog to recover the working tree from.
+              if (
+                confirm(
+                  `Reset --hard to ${commit.shortHash}?\n\nThis permanently discards all uncommitted changes in your working tree. It cannot be undone.`
+                )
+              ) {
+                onReset("hard");
+              }
+            }}
+          >
             Reset — hard <span className="text-dim">(discard all changes)</span>
           </button>
         </>

@@ -60,7 +60,28 @@ pub fn run_git(cwd: &Path, args: &[&str]) -> Result<String, GitError> {
 /// this and [`run_git`] funnel through the one `Command::new("git")` below, so
 /// git invocation stays auditable in a single place.
 pub fn run_git_raw(cwd: &Path, args: &[&str]) -> Result<GitOutput, GitError> {
-    let output = Command::new("git").current_dir(cwd).args(args).output()?;
+    let output = Command::new("git")
+        .current_dir(cwd)
+        .args(args)
+        // A GUI has no terminal for git to prompt on. Left to its own devices,
+        // git blocks forever waiting for a username, a password, or an SSH
+        // passphrase, and the Tauri command never returns — the window just
+        // hangs with no way to recover. Failing fast turns that into an error
+        // the UI can show. Credential *helpers* (libsecret, store, osxkeychain)
+        // are unaffected; only interactive prompting is disabled.
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        // Stops ssh reaching for a graphical passphrase prompt. Deliberately
+        // *not* `GIT_SSH_COMMAND`: that environment variable takes precedence
+        // over the user's `core.sshCommand`, so forcing `ssh -oBatchMode=yes`
+        // would silently discard a configured wrapper, proxy command, chosen
+        // identity file, or non-OpenSSH client — breaking the very thing this
+        // project promises to respect. Enforcing non-interactivity is enough;
+        // replacing the transport is not ours to do. With no controlling
+        // terminal and no askpass, ssh fails fast rather than hanging.
+        .env("SSH_ASKPASS", "")
+        .env("SSH_ASKPASS_REQUIRE", "never")
+        .output()?;
 
     Ok(GitOutput {
         // Diff and blame output can carry non-UTF-8 bytes from binary or
@@ -95,6 +116,22 @@ mod tests {
             }
             other => panic!("expected CommandFailed, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn a_configured_ssh_command_is_left_intact() {
+        // The whole point of shelling out to system git is that the user's own
+        // configuration keeps working. Overriding `core.sshCommand` — which is
+        // what setting `GIT_SSH_COMMAND` would do — silently breaks custom keys,
+        // proxy commands, and non-OpenSSH clients.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        repo.git(&["config", "core.sshCommand", "/usr/bin/my-custom-ssh -v"]);
+
+        let configured = run_git(repo.path(), &["config", "--get", "core.sshCommand"])
+            .expect("reading the config back should succeed");
+
+        assert_eq!(configured.trim(), "/usr/bin/my-custom-ssh -v");
     }
 
     #[test]

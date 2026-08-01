@@ -25,17 +25,17 @@ pub fn get_stash_diff(repo_path: String, index: usize) -> Result<String, String>
 
 /// Restores the stash and keeps it. Distinct from [`pop_stash`] — see `core::stash`.
 #[tauri::command]
-pub fn apply_stash(repo_path: String, index: usize) -> Result<(), String> {
-    stash::apply_stash(Path::new(&repo_path), index).map_err(to_ipc_error)
+pub fn apply_stash(repo_path: String, index: usize, hash: String) -> Result<(), String> {
+    stash::apply_stash(Path::new(&repo_path), index, &hash).map_err(to_ipc_error)
 }
 
 /// Restores the stash and removes it. Distinct from [`apply_stash`].
 #[tauri::command]
-pub fn pop_stash(repo_path: String, index: usize) -> Result<(), String> {
-    stash::pop_stash(Path::new(&repo_path), index).map_err(to_ipc_error)
+pub fn pop_stash(repo_path: String, index: usize, hash: String) -> Result<(), String> {
+    stash::pop_stash(Path::new(&repo_path), index, &hash).map_err(to_ipc_error)
 }
 
 #[tauri::command]
-pub fn drop_stash(repo_path: String, index: usize) -> Result<(), String> {
-    stash::drop_stash(Path::new(&repo_path), index).map_err(to_ipc_error)
+pub fn drop_stash(repo_path: String, index: usize, hash: String) -> Result<(), String> {
+    stash::drop_stash(Path::new(&repo_path), index, &hash).map_err(to_ipc_error)
 }

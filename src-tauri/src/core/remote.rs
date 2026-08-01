@@ -22,9 +22,15 @@ pub fn list_remotes(repo_path: &Path) -> Result<Vec<Remote>, GitError> {
     let mut remotes: Vec<Remote> = Vec::new();
 
     for line in raw.lines().filter(|l| !l.trim().is_empty()) {
-        // "<name>\t<url> (fetch|push)"
-        let mut parts = line.split_whitespace();
-        let (Some(name), Some(url), Some(kind)) = (parts.next(), parts.next(), parts.next()) else {
+        // "<name>\t<url> (fetch|push)". The URL can contain spaces — a local-path
+        // remote like `/mnt/My Drive/repo.git` is perfectly legal — so the only
+        // safe split points are the tab after the name and the last space before
+        // the trailing marker. Splitting on whitespace truncates such URLs, and
+        // the truncated value then round-trips back out through `set_remote_url`.
+        let Some((name, rest)) = line.split_once('\t') else {
+            continue;
+        };
+        let Some((url, kind)) = rest.rsplit_once(' ') else {
             continue;
         };
 
@@ -126,6 +132,22 @@ mod tests {
         );
         assert_eq!(remotes[0].name, "origin");
         assert_eq!(remotes[0].fetch_url, remotes[0].push_url);
+    }
+
+    #[test]
+    fn remote_url_containing_a_space_survives() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        // A local-path remote with a space is legal and not unusual on a mounted
+        // drive; whitespace-splitting the `remote -v` output truncates it.
+        let url = "/mnt/My Drive/backup repo.git";
+        add_remote(repo.path(), "spaced", url).expect("add");
+
+        let remotes = list_remotes(repo.path()).expect("list");
+
+        assert_eq!(remotes.len(), 1);
+        assert_eq!(remotes[0].fetch_url, url);
+        assert_eq!(remotes[0].push_url, url);
     }
 
     #[test]
