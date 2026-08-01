@@ -1,0 +1,561 @@
+use std::path::Path;
+
+use serde::{Deserialize, Serialize};
+
+use super::exec::{run_git, GitError};
+
+/// Field separator inside one commit record.
+const FIELD_SEP: char = '\u{0}';
+/// Record separator between commits.
+///
+/// A dedicated ASCII record separator rather than a newline, because commit
+/// subjects are arbitrary text. The old prototype used `%H|%h|...`, which
+/// silently corrupted any commit whose subject contained a pipe.
+const RECORD_SEP: char = '\u{1e}';
+
+const LOG_FORMAT: &str = "--pretty=format:%H%x00%h%x00%an%x00%ae%x00%at%x00%P%x00%D%x00%s%x1e";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Commit {
+    pub hash: String,
+    pub short_hash: String,
+    pub author_name: String,
+    pub author_email: String,
+    /// Author timestamp, seconds since the Unix epoch.
+    pub timestamp: i64,
+    pub parents: Vec<String>,
+    /// Ref names pointing at this commit (branches, tags, HEAD).
+    pub refs: Vec<String>,
+    pub subject: String,
+}
+
+/// Reads commit history, newest first.
+///
+/// `--topo-order` keeps a branch's commits contiguous rather than interleaving
+/// them strictly by date, which is what makes the lane layout stable and
+/// readable. `limit` bounds the work on large repositories.
+pub fn get_log(repo_path: &Path, limit: usize) -> Result<Vec<Commit>, GitError> {
+    let limit_arg = format!("--max-count={limit}");
+    let raw = run_git(
+        repo_path,
+        &["log", "--all", "--topo-order", &limit_arg, LOG_FORMAT],
+    )?;
+    Ok(parse_log(&raw))
+}
+
+/// Parses the output of `git log` with [`LOG_FORMAT`].
+///
+/// Pure so it can be tested against records that are awkward to produce with a
+/// real repo — in particular subjects containing the characters that broke the
+/// prototype's pipe-delimited format.
+pub fn parse_log(raw: &str) -> Vec<Commit> {
+    raw.split(RECORD_SEP)
+        // `git log` still emits a newline between entries even with a custom
+        // record separator, so every record after the first is prefixed with one.
+        .map(|record| record.trim_start_matches(['\n', '\r']))
+        .filter(|record| !record.is_empty())
+        .filter_map(parse_commit)
+        .collect()
+}
+
+fn parse_commit(record: &str) -> Option<Commit> {
+    // `splitn` with the exact field count so a subject containing anything
+    // other than a NUL survives intact.
+    let mut fields = record.splitn(8, FIELD_SEP);
+    let hash = fields.next()?.to_string();
+    if hash.is_empty() {
+        return None;
+    }
+
+    Some(Commit {
+        hash,
+        short_hash: fields.next()?.to_string(),
+        author_name: fields.next()?.to_string(),
+        author_email: fields.next()?.to_string(),
+        timestamp: fields.next()?.trim().parse().unwrap_or(0),
+        parents: fields
+            .next()?
+            .split_whitespace()
+            .map(str::to_string)
+            .collect(),
+        refs: fields
+            .next()?
+            .split(", ")
+            .map(str::trim)
+            .filter(|r| !r.is_empty())
+            .map(str::to_string)
+            .collect(),
+        subject: fields.next().unwrap_or_default().to_string(),
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Lane layout
+// ---------------------------------------------------------------------------
+
+/// One lane occupied below a row, and the commit it is waiting to reach.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LaneSlot {
+    pub lane: usize,
+    /// Hash of the commit this lane descends toward.
+    pub target: String,
+}
+
+/// A commit positioned in the graph, plus everything a renderer needs to draw
+/// the lines around it without re-deriving topology.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphRow {
+    pub hash: String,
+    /// Column this commit's dot sits in.
+    pub lane: usize,
+    /// Lanes active *above* this row — lines arriving from the previous row.
+    pub incoming: Vec<LaneSlot>,
+    /// Lanes active *below* this row — lines continuing to the next row.
+    pub outgoing: Vec<LaneSlot>,
+    /// Lanes to the side that terminate at this commit: branches being merged in.
+    /// Each is a line that bends from that lane into `lane`.
+    pub merged_from: Vec<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphLayout {
+    pub rows: Vec<GraphRow>,
+    /// Widest point of the graph — how many columns the renderer must reserve.
+    pub lane_count: usize,
+}
+
+/// Assigns each commit a lane, producing a crossing-minimal DAG layout.
+///
+/// Pure: takes commit nodes, returns lane assignments. No git invocation, so it
+/// can be tested against synthetic DAGs covering shapes that are tedious to
+/// build as real repositories (octopus merges, orphan branches).
+///
+/// The algorithm tracks a set of active lanes, each reserving the hash of the
+/// commit it is descending toward:
+///
+/// 1. A commit claims the leftmost lane already reserved for it. If nothing
+///    reserved it, the commit is a tip and takes the leftmost free lane.
+/// 2. Any *other* lane reserved for the same commit converges here and is
+///    released — those become `merged_from` edges.
+/// 3. The commit's first parent inherits its lane, keeping mainline history in
+///    a straight column. Additional parents (merges) claim free lanes to the
+///    right.
+///
+/// Releasing lanes in step 2 and reusing the leftmost free lane in step 3 is
+/// what stops the graph from drifting endlessly rightward on a long history.
+///
+/// `commits` must be in topological order (children before parents) — which is
+/// what `get_log` requests via `--topo-order`.
+pub fn compute_lanes(commits: &[Commit]) -> GraphLayout {
+    // lanes[i] = the hash lane `i` is descending toward, or None if free.
+    let mut lanes: Vec<Option<String>> = Vec::new();
+    let mut rows = Vec::with_capacity(commits.len());
+    let mut lane_count = 0usize;
+
+    for commit in commits {
+        let incoming = snapshot(&lanes);
+
+        // 1. Claim a lane: the leftmost one reserved for this commit, else a free one.
+        let reserved: Vec<usize> = lanes
+            .iter()
+            .enumerate()
+            .filter(|(_, slot)| slot.as_deref() == Some(commit.hash.as_str()))
+            .map(|(i, _)| i)
+            .collect();
+
+        let lane = match reserved.first() {
+            Some(&first) => first,
+            None => claim_free_lane(&mut lanes),
+        };
+
+        // 2. Release the duplicate reservations converging into this commit.
+        let merged_from: Vec<usize> = reserved.iter().skip(1).copied().collect();
+        for &dup in &merged_from {
+            lanes[dup] = None;
+        }
+
+        // 3. Hand this lane to the first parent; give the rest their own lanes.
+        //    Assigning the first parent *before* allocating for the others means
+        //    a merge's second parent can never steal the mainline column.
+        match commit.parents.split_first() {
+            Some((first, rest)) => {
+                lanes[lane] = Some(first.clone());
+                for parent in rest {
+                    // A parent already being descended toward shares that lane
+                    // rather than opening a redundant one.
+                    if lanes
+                        .iter()
+                        .any(|slot| slot.as_deref() == Some(parent.as_str()))
+                    {
+                        continue;
+                    }
+                    let extra = claim_free_lane(&mut lanes);
+                    lanes[extra] = Some(parent.clone());
+                }
+            }
+            // A root commit ends its lane.
+            None => lanes[lane] = None,
+        }
+
+        trim_trailing_free(&mut lanes);
+        lane_count = lane_count.max(lanes.len()).max(lane + 1);
+
+        rows.push(GraphRow {
+            hash: commit.hash.clone(),
+            lane,
+            incoming,
+            outgoing: snapshot(&lanes),
+            merged_from,
+        });
+    }
+
+    GraphLayout { rows, lane_count }
+}
+
+/// Leftmost free lane, extending the set only when every lane is busy.
+fn claim_free_lane(lanes: &mut Vec<Option<String>>) -> usize {
+    match lanes.iter().position(Option::is_none) {
+        Some(free) => free,
+        None => {
+            lanes.push(None);
+            lanes.len() - 1
+        }
+    }
+}
+
+/// Drops trailing empty lanes so `lane_count` reflects the real width.
+fn trim_trailing_free(lanes: &mut Vec<Option<String>>) {
+    while matches!(lanes.last(), Some(None)) {
+        lanes.pop();
+    }
+}
+
+fn snapshot(lanes: &[Option<String>]) -> Vec<LaneSlot> {
+    lanes
+        .iter()
+        .enumerate()
+        .filter_map(|(lane, slot)| {
+            slot.as_ref().map(|target| LaneSlot {
+                lane,
+                target: target.clone(),
+            })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::test_support::FixtureRepo;
+
+    /// Builds a synthetic commit with the given hash and parents. Only the
+    /// fields the lane algorithm reads need to be meaningful.
+    fn node(hash: &str, parents: &[&str]) -> Commit {
+        Commit {
+            hash: hash.to_string(),
+            short_hash: hash.to_string(),
+            author_name: "Test".into(),
+            author_email: "test@penguingit.invalid".into(),
+            timestamp: 0,
+            parents: parents.iter().map(|p| p.to_string()).collect(),
+            refs: Vec::new(),
+            subject: format!("commit {hash}"),
+        }
+    }
+
+    fn lane_of(layout: &GraphLayout, hash: &str) -> usize {
+        layout
+            .rows
+            .iter()
+            .find(|r| r.hash == hash)
+            .unwrap_or_else(|| panic!("no row for {hash}"))
+            .lane
+    }
+
+    // -- Lane layout: the five required synthetic DAG shapes -----------------
+
+    #[test]
+    fn lanes_linear_history_stays_in_one_column() {
+        // C -> B -> A
+        let commits = vec![node("C", &["B"]), node("B", &["A"]), node("A", &[])];
+
+        let layout = compute_lanes(&commits);
+
+        assert_eq!(layout.lane_count, 1);
+        for row in &layout.rows {
+            assert_eq!(row.lane, 0, "{} drifted off the mainline", row.hash);
+            assert!(row.merged_from.is_empty());
+        }
+        // The root ends its lane, leaving nothing below it.
+        assert!(layout.rows.last().unwrap().outgoing.is_empty());
+    }
+
+    #[test]
+    fn lanes_single_merge_reconverges_to_mainline() {
+        //   M
+        //  / \
+        // B   C
+        //  \ /
+        //   A
+        let commits = vec![
+            node("M", &["B", "C"]),
+            node("B", &["A"]),
+            node("C", &["A"]),
+            node("A", &[]),
+        ];
+
+        let layout = compute_lanes(&commits);
+
+        assert_eq!(
+            layout.lane_count, 2,
+            "a single merge needs exactly two lanes"
+        );
+        assert_eq!(lane_of(&layout, "M"), 0);
+        assert_eq!(
+            lane_of(&layout, "B"),
+            0,
+            "first parent must inherit the mainline"
+        );
+        assert_eq!(lane_of(&layout, "C"), 1);
+        assert_eq!(
+            lane_of(&layout, "A"),
+            0,
+            "the base must land back on the mainline"
+        );
+
+        // A is where the side lane converges back in.
+        let a = layout.rows.iter().find(|r| r.hash == "A").unwrap();
+        assert_eq!(a.merged_from, vec![1]);
+    }
+
+    #[test]
+    fn lanes_octopus_merge_opens_a_lane_per_extra_parent() {
+        //   O
+        // / | \ \
+        // B C D E   (four parents), all rooted at A
+        let commits = vec![
+            node("O", &["B", "C", "D", "E"]),
+            node("B", &["A"]),
+            node("C", &["A"]),
+            node("D", &["A"]),
+            node("E", &["A"]),
+            node("A", &[]),
+        ];
+
+        let layout = compute_lanes(&commits);
+
+        assert_eq!(
+            layout.lane_count, 4,
+            "four parents need four columns, no more"
+        );
+        assert_eq!(lane_of(&layout, "O"), 0);
+        // Every parent gets a distinct lane — overlapping lanes are exactly the
+        // "crossing-line glitch" this test exists to catch.
+        let parent_lanes: Vec<usize> = ["B", "C", "D", "E"]
+            .iter()
+            .map(|h| lane_of(&layout, h))
+            .collect();
+        let mut sorted = parent_lanes.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            4,
+            "parents collided in the same lane: {parent_lanes:?}"
+        );
+
+        // All four converge back into A, which sits on the mainline.
+        let a = layout.rows.iter().find(|r| r.hash == "A").unwrap();
+        assert_eq!(lane_of(&layout, "A"), 0);
+        assert_eq!(
+            a.merged_from.len(),
+            3,
+            "three side lanes should converge into A"
+        );
+    }
+
+    #[test]
+    fn lanes_diverged_then_remerged_releases_the_side_lane() {
+        // H -> M(merge of F,G) -> F/G -> B -> A
+        let commits = vec![
+            node("H", &["M"]),
+            node("M", &["F", "G"]),
+            node("F", &["B"]),
+            node("G", &["B"]),
+            node("B", &["A"]),
+            node("A", &[]),
+        ];
+
+        let layout = compute_lanes(&commits);
+
+        assert_eq!(layout.lane_count, 2);
+        assert_eq!(lane_of(&layout, "H"), 0);
+        assert_eq!(lane_of(&layout, "B"), 0);
+        assert_eq!(lane_of(&layout, "A"), 0);
+
+        // Once B reabsorbs the side branch, the graph must narrow back to a
+        // single column rather than leaving lane 1 reserved forever.
+        let b = layout.rows.iter().find(|r| r.hash == "B").unwrap();
+        assert_eq!(b.merged_from, vec![1]);
+        assert_eq!(
+            b.outgoing.len(),
+            1,
+            "lane 1 should be released once the branches reconverge"
+        );
+    }
+
+    #[test]
+    fn lanes_orphan_branch_gets_its_own_column() {
+        // Two unrelated roots — an orphan branch shares no history at all.
+        let commits = vec![
+            node("B", &["A"]),
+            node("A", &[]),
+            node("Y", &["X"]),
+            node("X", &[]),
+        ];
+
+        let layout = compute_lanes(&commits);
+
+        assert_eq!(lane_of(&layout, "B"), 0);
+        assert_eq!(lane_of(&layout, "A"), 0);
+        // A's lane is released when it turns out to be a root, so the orphan
+        // tip reuses lane 0 rather than stacking up a new column.
+        assert_eq!(lane_of(&layout, "Y"), 0);
+        assert_eq!(lane_of(&layout, "X"), 0);
+        assert_eq!(layout.lane_count, 1);
+
+        for row in &layout.rows {
+            assert!(
+                row.merged_from.is_empty(),
+                "unrelated histories must not be joined by an edge"
+            );
+        }
+    }
+
+    #[test]
+    fn lanes_interleaved_branches_do_not_reuse_an_occupied_lane() {
+        // A long-running side branch stays open across several mainline commits.
+        let commits = vec![
+            node("M", &["C", "S2"]),
+            node("C", &["B"]),
+            node("B", &["A"]),
+            node("S2", &["S1"]),
+            node("S1", &["A"]),
+            node("A", &[]),
+        ];
+
+        let layout = compute_lanes(&commits);
+
+        // While the side branch is open, mainline commits must not be assigned
+        // its lane — that is the classic overlap bug.
+        let side_lane = lane_of(&layout, "S2");
+        assert_ne!(side_lane, lane_of(&layout, "C"));
+        assert_ne!(side_lane, lane_of(&layout, "B"));
+        assert_eq!(
+            lane_of(&layout, "S1"),
+            side_lane,
+            "the side branch keeps its lane"
+        );
+        assert_eq!(layout.lane_count, 2);
+    }
+
+    #[test]
+    fn lanes_handle_an_empty_history() {
+        let layout = compute_lanes(&[]);
+        assert!(layout.rows.is_empty());
+        assert_eq!(layout.lane_count, 0);
+    }
+
+    // -- Log parsing --------------------------------------------------------
+
+    #[test]
+    fn parse_log_survives_subjects_containing_pipes() {
+        // The exact class of subject that silently corrupted the prototype's
+        // pipe-delimited format string.
+        // `\u{0}` rather than `\0` wherever a digit follows, so the escape can't
+        // read as octal.
+        let record = "abc123\0abc\0Ada\0ada@example.invalid\u{0}1700000000\0def456\0HEAD -> main\0fix: a | b | c\u{1e}";
+
+        let commits = parse_log(record);
+
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].subject, "fix: a | b | c");
+        assert_eq!(commits[0].parents, vec!["def456"]);
+        assert_eq!(commits[0].refs, vec!["HEAD -> main"]);
+        assert_eq!(commits[0].timestamp, 1_700_000_000);
+    }
+
+    #[test]
+    fn parse_log_reads_multiple_parents_and_no_refs() {
+        let raw = "h1\0h1\0A\0a@x.invalid\u{0}1\0p1 p2\0\0merge\u{1e}\nh2\0h2\0B\0b@x.invalid\u{0}2\0\0\0root\u{1e}";
+
+        let commits = parse_log(raw);
+
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].parents, vec!["p1", "p2"]);
+        assert!(commits[0].refs.is_empty());
+        assert!(
+            commits[1].parents.is_empty(),
+            "a root commit has no parents"
+        );
+    }
+
+    // -- Against a real repository ------------------------------------------
+
+    #[test]
+    fn get_log_reads_real_history_newest_first() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "1", "First");
+        repo.commit("b.txt", "2", "Second");
+
+        let commits = get_log(repo.path(), 50).expect("log should succeed");
+
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].subject, "Second");
+        assert_eq!(commits[1].subject, "First");
+        assert_eq!(commits[0].parents, vec![commits[1].hash.clone()]);
+        assert_eq!(commits[0].author_name, "PenguinGit Test");
+    }
+
+    #[test]
+    fn lanes_match_a_real_multi_merge_repository() {
+        // The synthetic tests above cover shape; this proves the same algorithm
+        // holds up on history git itself produced.
+        let repo = FixtureRepo::new();
+        repo.commit("base.txt", "base", "Base");
+
+        repo.git(&["checkout", "-b", "feature"]);
+        repo.commit("feature.txt", "f", "Feature work");
+
+        repo.git(&["checkout", "main"]);
+        repo.commit("main.txt", "m", "Mainline work");
+        repo.git(&["merge", "--no-ff", "feature", "-m", "Merge feature"]);
+
+        let commits = get_log(repo.path(), 50).expect("log should succeed");
+        let layout = compute_lanes(&commits);
+
+        assert_eq!(layout.rows.len(), commits.len());
+        assert_eq!(
+            layout.lane_count, 2,
+            "one merge should widen the graph to two lanes"
+        );
+
+        // The merge commit is the tip and owns the mainline.
+        let merge = &layout.rows[0];
+        assert_eq!(merge.lane, 0);
+        assert_eq!(commits[0].parents.len(), 2);
+
+        // Every lane referenced by a row must be within the reported width,
+        // otherwise the renderer would draw outside its own viewport.
+        for row in &layout.rows {
+            assert!(row.lane < layout.lane_count);
+            for slot in row.incoming.iter().chain(&row.outgoing) {
+                assert!(slot.lane < layout.lane_count);
+            }
+        }
+    }
+}

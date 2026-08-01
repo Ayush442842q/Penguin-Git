@@ -1,0 +1,131 @@
+.staging-panel {
+  width: var(--detail-w);
+  flex-shrink: 0;
+  border-right: none;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.staging-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.staging-section-header {
+  padding: 10px 14px 5px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+  z-index: 1;
+}
+
+.staging-clean {
+  padding: 20px 14px;
+  font-size: 12px;
+}
+
+.file-list {
+  list-style: none;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.file-row:hover {
+  background: var(--bg-hover);
+}
+
+.file-row.selected {
+  background: var(--bg-active);
+}
+
+.file-kind {
+  width: 14px;
+  flex-shrink: 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kind-added,
+.kind-untracked {
+  color: var(--accent-green);
+}
+.kind-modified,
+.kind-typechanged {
+  color: var(--accent-orange);
+}
+.kind-deleted {
+  color: var(--accent-red);
+}
+.kind-renamed,
+.kind-copied {
+  color: var(--accent-cyan);
+}
+.kind-conflicted {
+  color: var(--accent-pink);
+}
+
+.file-path {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.file-row:hover .file-actions,
+.file-row.selected .file-actions {
+  opacity: 1;
+}
+
+.file-actions button {
+  padding: 1px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.commit-box {
+  border-top: 1px solid var(--border-subtle);
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.commit-box textarea {
+  resize: vertical;
+  min-height: 54px;
+  font-size: 12px;
+}
+
+.commit-box-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.amend-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.amend-toggle input {
+  cursor: pointer;
+}

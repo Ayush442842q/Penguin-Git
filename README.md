@@ -40,8 +40,8 @@ PenguinGit is in **early development**, built across 8 planned phases — from a
 | Phase                                    | Status         |
 | ---------------------------------------- | -------------- |
 | 0 — Scaffolding & CI                     | ✅ Done        |
-| 1 — Core git engine & core UI            | 🔜 Next        |
-| 2 — Conflicts, rebase, undo/redo         | 🔜 Not started |
+| 1 — Core git engine & core UI            | ✅ Done        |
+| 2 — Conflicts, rebase, undo/redo         | 🔜 Next        |
 | 3 — Multi-repo & submodules              | 🔜 Not started |
 | 4 — GitKraken MCP server                 | 🔜 Not started |
 | 5 — AI features (bring-your-own key)     | 🔜 Not started |

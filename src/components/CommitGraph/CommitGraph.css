@@ -1,0 +1,147 @@
+.commit-graph {
+  flex: 1;
+  min-width: 0;
+}
+
+.graph-filter {
+  max-width: 320px;
+  font-size: 12px;
+  padding: 4px 9px;
+}
+
+.graph-scroll {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.graph-rows {
+  position: relative;
+  width: 100%;
+}
+
+.graph-empty {
+  padding: 24px 16px;
+  font-size: 12px;
+}
+
+.graph-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 14px;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+
+.graph-row:hover {
+  background: var(--bg-hover);
+}
+
+.graph-row.selected {
+  background: var(--bg-active);
+  border-bottom-color: var(--border-muted);
+}
+
+.graph-row.wip .graph-subject {
+  color: var(--accent-orange);
+  font-style: italic;
+}
+
+.graph-lanes {
+  flex-shrink: 0;
+}
+
+.graph-subject {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.graph-author {
+  width: 130px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.graph-date {
+  width: 96px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+
+.graph-hash {
+  width: 62px;
+  flex-shrink: 0;
+  font-size: 11px;
+  text-align: right;
+}
+
+/* ------------------------------------------------------------------ */
+/* Context menu                                                        */
+/* ------------------------------------------------------------------ */
+
+.context-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 260px;
+  padding: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.context-menu-title {
+  padding: 6px 10px 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 3px;
+}
+
+.context-menu button {
+  justify-content: flex-start;
+  width: 100%;
+  background: transparent;
+  border-color: transparent;
+  font-weight: 400;
+  gap: 5px;
+}
+
+.context-menu button:hover {
+  background: var(--bg-hover);
+  border-color: transparent;
+}
+
+.context-menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border-subtle);
+}
+
+.context-menu-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+}
+
+.context-menu-prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.context-menu-prompt-actions button {
+  width: auto;
+}
