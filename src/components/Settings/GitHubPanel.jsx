@@ -28,7 +28,7 @@ export default function GitHubPanel() {
       try {
         const tokenStatus = await getGithubToken();
         if (active) setHasToken(!!tokenStatus);
-      } catch (err) {
+      } catch {
         if (active) setHasToken(false);
       }
 
@@ -36,7 +36,7 @@ export default function GitHubPanel() {
         try {
           const origin = await getRepoOrigin(activeRepoPath);
           if (active) setOriginInfo(origin);
-        } catch (err) {
+        } catch {
           if (active) setOriginInfo(null);
         }
       } else {
@@ -115,7 +115,8 @@ export default function GitHubPanel() {
       <div className="github-panel-header">
         <h3>GitHub Integration Settings</h3>
         <p>
-          Configure a GitHub Personal Access Token (PAT) for PR and issue inbox features in Launchpad.
+          Configure a GitHub Personal Access Token (PAT) for PR and issue inbox features in
+          Launchpad.
         </p>
       </div>
 

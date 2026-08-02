@@ -51,7 +51,9 @@ describe("GitHubPanel Component", () => {
 
     await waitFor(() => {
       expect(tauriBridge.testGithubConnection).toHaveBeenCalled();
-      expect(screen.getByText(/✓ Connection successful! Authenticated as @Ayush442842q/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/✓ Connection successful! Authenticated as @Ayush442842q/)
+      ).toBeInTheDocument();
     });
   });
 
