@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useRepoStore } from "../../store/repoStore";
 import * as git from "../../services/tauriBridge";
+import ExplainBranchModal from "../AiModals/ExplainBranchModal";
+import PrDescriptionModal from "../AiModals/PrDescriptionModal";
 
 /** Ahead/behind chips, only rendered when the branch actually diverges. */
 function DivergenceBadges({ ahead, behind }) {
@@ -13,7 +15,7 @@ function DivergenceBadges({ ahead, behind }) {
   );
 }
 
-function BranchRow({ branch, busy, run }) {
+function BranchRow({ branch, busy, run, onExplainBranch, onGeneratePr }) {
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(branch.name);
 
@@ -53,6 +55,32 @@ function BranchRow({ branch, busy, run }) {
       </span>
       <DivergenceBadges ahead={branch.ahead} behind={branch.behind} />
       <span className="row-actions">
+        {!branch.isRemote && (
+          <>
+            <button
+              className="ghost"
+              disabled={busy}
+              title="Explain Branch with AI"
+              onClick={(e) => {
+                e.stopPropagation();
+                onExplainBranch(branch.name);
+              }}
+            >
+              🔍
+            </button>
+            <button
+              className="ghost"
+              disabled={busy}
+              title="Generate PR Description"
+              onClick={(e) => {
+                e.stopPropagation();
+                onGeneratePr(branch.name);
+              }}
+            >
+              📝
+            </button>
+          </>
+        )}
         {!branch.isHead && (
           <button
             className="ghost"
@@ -108,6 +136,8 @@ export default function BranchPanel() {
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
+  const [explainBranch, setExplainBranch] = useState(null);
+  const [prBranch, setPrBranch] = useState(null);
 
   const local = branches.filter((b) => !b.isRemote);
   const remote = branches.filter((b) => b.isRemote);
@@ -146,7 +176,14 @@ export default function BranchPanel() {
 
       <ul className="sidebar-list">
         {local.map((branch) => (
-          <BranchRow key={branch.name} branch={branch} busy={busy} run={run} />
+          <BranchRow
+            key={branch.name}
+            branch={branch}
+            busy={busy}
+            run={run}
+            onExplainBranch={(b) => setExplainBranch(b)}
+            onGeneratePr={(b) => setPrBranch(b)}
+          />
         ))}
       </ul>
 
@@ -157,10 +194,25 @@ export default function BranchPanel() {
           </div>
           <ul className="sidebar-list">
             {remote.map((branch) => (
-              <BranchRow key={branch.name} branch={branch} busy={busy} run={run} />
+              <BranchRow
+                key={branch.name}
+                branch={branch}
+                busy={busy}
+                run={run}
+                onExplainBranch={(b) => setExplainBranch(b)}
+                onGeneratePr={(b) => setPrBranch(b)}
+              />
             ))}
           </ul>
         </>
+      )}
+
+      {explainBranch && (
+        <ExplainBranchModal branch={explainBranch} onClose={() => setExplainBranch(null)} />
+      )}
+
+      {prBranch && (
+        <PrDescriptionModal branch={prBranch} onClose={() => setPrBranch(null)} />
       )}
     </div>
   );
