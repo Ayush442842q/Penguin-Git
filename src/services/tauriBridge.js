@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 
 /**
  * Typed wrappers around Tauri's `invoke()`.
@@ -263,3 +263,33 @@ export const githubCreatePr = (repoPath, title, body, head, base) =>
   invoke("github_create_pr", { repoPath, title, body: body || "", head, base });
 export const startWorkOnIssue = (repoPath, number, title) =>
   invoke("start_work_on_issue", { repoPath, number, title });
+
+// -- patch --------------------------------------------------------------------
+
+export const exportPatch = (repoPath, commitRange) =>
+  invoke("export_patch", { repoPath, commitRange: commitRange || null });
+
+export const previewPatch = (repoPath, patchContent) =>
+  invoke("preview_patch", { repoPath, patchContent });
+
+export const applyPatch = (repoPath, patchContent) =>
+  invoke("apply_patch", { repoPath, patchContent });
+
+export async function savePatchFile(defaultName) {
+  const selected = await saveDialog({
+    defaultPath: defaultName,
+    filters: [{ name: "Patch File", extensions: ["patch", "diff"] }],
+    title: "Save Patch File",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+export async function pickPatchFile() {
+  const selected = await openDialog({
+    directory: false,
+    multiple: false,
+    filters: [{ name: "Patch File", extensions: ["patch", "diff"] }],
+    title: "Select Patch File to Import",
+  });
+  return typeof selected === "string" ? selected : null;
+}

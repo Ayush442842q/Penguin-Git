@@ -96,6 +96,11 @@ export const BRIDGE_FUNCTIONS = [
   "githubGetPr",
   "githubCreatePr",
   "startWorkOnIssue",
+  "exportPatch",
+  "previewPatch",
+  "applyPatch",
+  "savePatchFile",
+  "pickPatchFile",
 ];
 
 export function makeBridgeMock() {
