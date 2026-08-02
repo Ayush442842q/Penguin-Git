@@ -94,6 +94,16 @@ pub fn run() {
             commands::submodule::get_submodules,
             commands::submodule::init_submodule,
             commands::submodule::update_submodule,
+            // ai & stage hunk
+            commands::ai::save_ai_config,
+            commands::ai::get_ai_config,
+            commands::ai::test_ai_connection,
+            commands::ai::ai_compose_commit_message,
+            commands::ai::ai_explain_commit,
+            commands::ai::ai_explain_branch,
+            commands::ai::ai_generate_pr_description,
+            commands::ai::get_branch_diff,
+            commands::ai::git_stage_hunk,
         ])
         .run(tauri::generate_context!())
         .expect("error while running PenguinGit");

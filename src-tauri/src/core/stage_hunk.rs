@@ -52,17 +52,19 @@ mod tests {
         assert!(full_diff.contains("Line 1 CHANGED"));
         assert!(full_diff.contains("Line 10 CHANGED"));
 
-        // Construct a patch for ONLY the first hunk
-        let patch = format!(
-            "diff --git a/{file_name} b/{file_name}\n\
-             --- a/{file_name}\n\
-             +++ b/{file_name}\n\
-             @@ -1,3 +1,3 @@\n\
-             -Line 1\n\
-             +Line 1 CHANGED\n\
-              Line 2\n\
-              Line 3\n"
-        );
+        // Construct a valid patch for ONLY the first hunk
+        let patch = vec![
+            format!("diff --git a/{file_name} b/{file_name}"),
+            format!("--- a/{file_name}"),
+            format!("+++ b/{file_name}"),
+            "@@ -1,3 +1,3 @@".to_string(),
+            "-Line 1".to_string(),
+            "+Line 1 CHANGED".to_string(),
+            " Line 2".to_string(),
+            " Line 3".to_string(),
+            "".to_string(),
+        ]
+        .join("\n");
 
         git_stage_hunk(repo.path(), &patch).expect("stage hunk");
 

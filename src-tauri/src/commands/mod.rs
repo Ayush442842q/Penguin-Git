@@ -5,6 +5,7 @@
 //! belongs in `core::` so the Phase 4 MCP server can reuse it. See
 //! `docs/CONTRIBUTING.md` ground rule 1.
 
+pub mod ai;
 pub mod branch;
 pub mod commit;
 pub mod conflict;
