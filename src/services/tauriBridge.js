@@ -179,11 +179,9 @@ export const resolveConflict = (repoId, path, content) =>
 export const continueOperation = (repoId) =>
   invoke("continue_operation", { repoId: { 0: repoId } });
 
-export const abortOperation = (repoId) =>
-  invoke("abort_operation", { repoId: { 0: repoId } });
+export const abortOperation = (repoId) => invoke("abort_operation", { repoId: { 0: repoId } });
 
-export const skipRebase = (repoId) =>
-  invoke("skip_rebase", { repoId: { 0: repoId } });
+export const skipRebase = (repoId) => invoke("skip_rebase", { repoId: { 0: repoId } });
 
 // -- rebase -------------------------------------------------------------------
 
@@ -195,7 +193,6 @@ export const interactiveRebase = (repoId, baseRef, todoItems) =>
 
 // -- undo ---------------------------------------------------------------------
 
-export const undoLastAction = (repoId) =>
-  invoke("undo_last_action", { repoId: { 0: repoId } });
+export const undoLastAction = (repoId) => invoke("undo_last_action", { repoId: { 0: repoId } });
 
 export const getUndoHistory = () => invoke("get_undo_history");

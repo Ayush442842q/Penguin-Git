@@ -21,10 +21,12 @@ pub fn find_sequence_editor_executable() -> Result<PathBuf, GitError> {
     };
 
     let current_exe = env::current_exe()?;
-    let exe_dir = current_exe.parent().ok_or_else(|| GitError::CommandFailed {
-        exit_code: None,
-        stderr: "Cannot determine current executable directory".into(),
-    })?;
+    let exe_dir = current_exe
+        .parent()
+        .ok_or_else(|| GitError::CommandFailed {
+            exit_code: None,
+            stderr: "Cannot determine current executable directory".into(),
+        })?;
 
     // Check directory candidates in order:
     // 1. Same directory (packaged build & tauri dev)
@@ -175,12 +177,11 @@ mod tests {
         // Ensure binary is compiled for test environment
         if find_sequence_editor_executable().is_err() {
             let _ = std::process::Command::new("cargo")
-                .args(&["build", "--bin", "penguingit-sequence-editor"])
+                .args(["build", "--bin", "penguingit-sequence-editor"])
                 .status();
         }
 
-        let _ = interactive_rebase(repo.path(), &c0, &todo_items)
-            .expect("interactive rebase");
+        let _ = interactive_rebase(repo.path(), &c0, &todo_items).expect("interactive rebase");
 
         let log = repo.git(&["log", "--oneline"]);
         assert!(log.contains("Commit 4"));

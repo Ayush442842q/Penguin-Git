@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRepoStore } from "../../store/repoStore";
 import * as git from "../../services/tauriBridge";
 import "./ConflictEditor.css";
@@ -25,7 +25,8 @@ export function ConflictEditor({ path }) {
     if (!repo || !activePath) return;
 
     let mounted = true;
-    git.readConflictStages(repo.id, activePath)
+    git
+      .readConflictStages(repo.id, activePath)
       .then((data) => {
         if (!mounted) return;
         setStages({

@@ -43,10 +43,7 @@ pub fn resolve_conflict(
 }
 
 #[tauri::command]
-pub fn continue_operation(
-    state: State<'_, AppState>,
-    repo_id: RepoId,
-) -> Result<String, String> {
+pub fn continue_operation(state: State<'_, AppState>, repo_id: RepoId) -> Result<String, String> {
     let repo = state
         .get(&repo_id)
         .ok_or_else(|| format!("Unknown repository: {}", repo_id.as_str()))?;
@@ -59,10 +56,7 @@ pub fn continue_operation(
 }
 
 #[tauri::command]
-pub fn abort_operation(
-    state: State<'_, AppState>,
-    repo_id: RepoId,
-) -> Result<String, String> {
+pub fn abort_operation(state: State<'_, AppState>, repo_id: RepoId) -> Result<String, String> {
     let repo = state
         .get(&repo_id)
         .ok_or_else(|| format!("Unknown repository: {}", repo_id.as_str()))?;
@@ -75,10 +69,7 @@ pub fn abort_operation(
 }
 
 #[tauri::command]
-pub fn skip_rebase(
-    state: State<'_, AppState>,
-    repo_id: RepoId,
-) -> Result<String, String> {
+pub fn skip_rebase(state: State<'_, AppState>, repo_id: RepoId) -> Result<String, String> {
     let repo = state
         .get(&repo_id)
         .ok_or_else(|| format!("Unknown repository: {}", repo_id.as_str()))?;

@@ -22,7 +22,9 @@ fn main() {
     let new_content = match fs::read_to_string(&todo_override_path) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("penguingit-sequence-editor error: failed to read '{todo_override_path}': {e}");
+            eprintln!(
+                "penguingit-sequence-editor error: failed to read '{todo_override_path}': {e}"
+            );
             process::exit(1);
         }
     };

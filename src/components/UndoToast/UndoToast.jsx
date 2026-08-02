@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useRepoStore } from "../../store/repoStore";
 import "./UndoToast.css";
 

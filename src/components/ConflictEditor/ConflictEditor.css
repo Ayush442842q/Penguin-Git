@@ -5,7 +5,10 @@
   width: 100%;
   background: var(--bg-primary, #1e1e2e);
   color: var(--text-primary, #cdd6f4);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   box-sizing: border-box;
 }
 

@@ -180,7 +180,9 @@ mod tests {
         repo.git(&["branch", "-D", "feature"]);
         assert!(!repo.git(&["branch", "--list"]).contains("feature"));
 
-        journal.undo_latest(repo.path()).expect("undo branch delete");
+        journal
+            .undo_latest(repo.path())
+            .expect("undo branch delete");
         assert!(repo.git(&["branch", "--list"]).contains("feature"));
     }
 
@@ -207,7 +209,9 @@ mod tests {
         let merge_head = repo.git(&["rev-parse", "HEAD"]).trim().to_string();
         assert_ne!(merge_head, head1);
 
-        journal.undo_latest(repo.path()).expect("undo completed merge");
+        journal
+            .undo_latest(repo.path())
+            .expect("undo completed merge");
         let post_undo_head = repo.git(&["rev-parse", "HEAD"]).trim().to_string();
         assert_ne!(post_undo_head, merge_head);
     }
@@ -253,9 +257,15 @@ mod tests {
         );
 
         repo.git(&["checkout", "feature"]);
-        assert_eq!(repo.git(&["rev-parse", "--abbrev-ref", "HEAD"]).trim(), "feature");
+        assert_eq!(
+            repo.git(&["rev-parse", "--abbrev-ref", "HEAD"]).trim(),
+            "feature"
+        );
 
         journal.undo_latest(repo.path()).expect("undo checkout");
-        assert_eq!(repo.git(&["rev-parse", "--abbrev-ref", "HEAD"]).trim(), "main");
+        assert_eq!(
+            repo.git(&["rev-parse", "--abbrev-ref", "HEAD"]).trim(),
+            "main"
+        );
     }
 }

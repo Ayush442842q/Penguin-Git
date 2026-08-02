@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useRepoStore } from "../../store/repoStore";
 import * as git from "../../services/tauriBridge";
 import "./RebaseDialog.css";
