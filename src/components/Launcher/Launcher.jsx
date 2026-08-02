@@ -1,19 +1,10 @@
-import React, { useEffect } from "react";
-import { useNavigate, UNSAFE_NavigationContext as NavigationContext } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useRepoStore } from "../../store/repoStore";
 import "./Launcher.css";
 
-function useSafeNavigate() {
-  const inRouter = React.useContext(NavigationContext);
-  if (!inRouter || !inRouter.navigator) {
-    return () => {};
-  }
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return useNavigate();
-}
-
 export function Launcher() {
-  const navigate = useSafeNavigate();
+  const navigate = useNavigate();
   const openRepoViaPicker = useRepoStore((s) => s.openRepoViaPicker);
   const openRepo = useRepoStore((s) => s.openRepo);
   const loadRecentRepos = useRepoStore((s) => s.loadRecentRepos);

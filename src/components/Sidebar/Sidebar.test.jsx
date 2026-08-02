@@ -1,5 +1,10 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+function render(ui, options) {
+  return rtlRender(<MemoryRouter>{ui}</MemoryRouter>, options);
+}
 
 vi.mock("../../services/tauriBridge", async () => {
   const { makeBridgeMock } = await import("../../test/bridgeMock");
