@@ -6,6 +6,7 @@
 
 pub mod ai;
 pub mod branch;
+pub mod cloud;
 pub mod commit;
 pub mod conflict;
 pub mod diff;
