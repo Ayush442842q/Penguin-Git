@@ -5,9 +5,11 @@ use axum::{routing::get, Router};
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+mod auth;
 mod db;
 mod error;
 mod models;
+mod routes;
 
 pub struct AppState {
     pub db: sqlx::PgPool,
@@ -40,6 +42,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
+        .route("/api/auth/register", axum::routing::post(routes::auth::register))
+        .route("/api/auth/login", axum::routing::post(routes::auth::login))
+        .route("/api/auth/logout", axum::routing::post(routes::auth::logout))
         .layer(cors)
         .with_state(state);
 
