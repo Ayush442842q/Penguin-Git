@@ -24,6 +24,7 @@ pub mod stash;
 pub mod status;
 pub mod submodule;
 pub mod undo;
+pub mod workspace;
 
 use crate::core::GitError;
 

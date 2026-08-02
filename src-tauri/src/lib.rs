@@ -120,6 +120,14 @@ pub fn run() {
             commands::patch::export_patch,
             commands::patch::preview_patch,
             commands::patch::apply_patch,
+            // workspace
+            commands::workspace::create_workspace,
+            commands::workspace::rename_workspace,
+            commands::workspace::delete_workspace,
+            commands::workspace::list_workspaces,
+            commands::workspace::add_repo_to_workspace,
+            commands::workspace::remove_repo_from_workspace,
+            commands::workspace::list_workspace_repos,
         ])
         .run(tauri::generate_context!())
         .expect("error while running PenguinGit");
