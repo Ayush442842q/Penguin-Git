@@ -146,10 +146,7 @@ pub fn parse_remote_url(url: &str) -> Option<RepoOrigin> {
         cleaned
     };
 
-    let parts: Vec<&str> = path_part
-        .split('/')
-        .filter(|p| !p.is_empty())
-        .collect();
+    let parts: Vec<&str> = path_part.split('/').filter(|p| !p.is_empty()).collect();
 
     if parts.len() >= 2 {
         let owner = parts[parts.len() - 2].to_string();
@@ -167,7 +164,10 @@ pub fn get_repo_origin(repo_path: &Path) -> Result<RepoOrigin, GitError> {
     let url = run_git(repo_path, &["remote", "get-url", "origin"])?;
     parse_remote_url(&url).ok_or_else(|| GitError::CommandFailed {
         exit_code: None,
-        stderr: format!("Failed to parse owner and repo from remote URL: {}", url.trim()),
+        stderr: format!(
+            "Failed to parse owner and repo from remote URL: {}",
+            url.trim()
+        ),
     })
 }
 
@@ -434,7 +434,8 @@ mod tests {
         assert_eq!(https2.repo, "PenguinGit");
 
         // HTTPS with credentials
-        let https3 = parse_remote_url("https://user:token@github.com/Ayush442842q/PenguinGit.git").unwrap();
+        let https3 =
+            parse_remote_url("https://user:token@github.com/Ayush442842q/PenguinGit.git").unwrap();
         assert_eq!(https3.owner, "Ayush442842q");
         assert_eq!(https3.repo, "PenguinGit");
     }

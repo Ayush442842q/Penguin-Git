@@ -9,12 +9,12 @@ const KEYRING_USER: &str = "github_pat";
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct LaunchpadItem {
-    pub kind: String,        // "pr" or "issue"
+    pub kind: String, // "pr" or "issue"
     pub title: String,
     pub number: u64,
-    pub repo: String,         // "owner/repo"
-    pub url: String,          // html_url
-    pub category: String,     // "Needs review", "Your PRs", "Ready to merge", "Issues"
+    pub repo: String,     // "owner/repo"
+    pub url: String,      // html_url
+    pub category: String, // "Needs review", "Your PRs", "Ready to merge", "Issues"
     pub updated_at: String,
     pub author: String,
     pub state: String,

@@ -60,8 +60,7 @@ impl GithubClient {
         let auth_val = format!("Bearer {}", token.trim());
         headers.insert(
             AUTHORIZATION,
-            HeaderValue::from_str(&auth_val)
-                .map_err(|e| format!("Invalid token header: {e}"))?,
+            HeaderValue::from_str(&auth_val).map_err(|e| format!("Invalid token header: {e}"))?,
         );
 
         let http = reqwest::Client::builder()
@@ -102,7 +101,8 @@ impl GithubClient {
 impl GitHostClient for GithubClient {
     async fn search_prs(&self, owner: &str, repo: &str) -> Result<Vec<LaunchpadItem>, String> {
         let current_user = self.get_current_user_login().await.unwrap_or_default();
-        let url = format!("https://api.github.com/repos/{owner}/{repo}/pulls?state=open&per_page=100");
+        let url =
+            format!("https://api.github.com/repos/{owner}/{repo}/pulls?state=open&per_page=100");
 
         let res = self
             .http
@@ -243,7 +243,8 @@ impl GitHostClient for GithubClient {
     }
 
     async fn get_issues(&self, owner: &str, repo: &str) -> Result<Vec<LaunchpadItem>, String> {
-        let url = format!("https://api.github.com/repos/{owner}/{repo}/issues?state=open&per_page=100");
+        let url =
+            format!("https://api.github.com/repos/{owner}/{repo}/issues?state=open&per_page=100");
 
         let res = self
             .http
