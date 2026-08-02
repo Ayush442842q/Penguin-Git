@@ -10,7 +10,9 @@ pub mod commit;
 pub mod conflict;
 pub mod diff;
 pub mod log;
+pub mod mcp;
 pub mod rebase;
+
 pub mod registry;
 pub mod remote;
 pub mod repo;

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { HashRouter, Routes, Route, useParams, useNavigate } from "react-router-dom";
 import { useRepoStore, subscribeToRepoChanges } from "./store/repoStore";
 import Launcher from "./components/Launcher/Launcher";
@@ -10,6 +10,7 @@ import StagingPanel from "./components/StagingPanel/StagingPanel";
 import { ConflictEditor } from "./components/ConflictEditor/ConflictEditor";
 import { RebaseDialog } from "./components/RebaseDialog/RebaseDialog";
 import { UndoToast } from "./components/UndoToast/UndoToast";
+import McpPanel from "./components/McpPanel/McpPanel";
 import "./App.css";
 
 function Header() {
@@ -18,39 +19,46 @@ function Header() {
   const busy = useRepoStore((s) => s.busy);
   const openRepoViaPicker = useRepoStore((s) => s.openRepoViaPicker);
   const closeRepo = useRepoStore((s) => s.closeRepo);
+  const [showMcp, setShowMcp] = useState(false);
 
   const status = slice?.status;
   const repo = slice?.repo;
 
   return (
-    <header className="app-header">
-      <div className="app-header-left">
-        <span className="app-brand">PenguinGit</span>
-        {repo && (
-          <>
-            <span className="text-dim">/</span>
-            <span className="truncate" title={repo.path}>
-              {repo.name}
-            </span>
-          </>
-        )}
-        {status?.branch && <span className="badge badge-purple">{status.branch}</span>}
-        {busy && <span className="text-dim">working…</span>}
-      </div>
+    <>
+      <header className="app-header">
+        <div className="app-header-left">
+          <span className="app-brand">PenguinGit</span>
+          {repo && (
+            <>
+              <span className="text-dim">/</span>
+              <span className="truncate" title={repo.path}>
+                {repo.name}
+              </span>
+            </>
+          )}
+          {status?.branch && <span className="badge badge-purple">{status.branch}</span>}
+          {busy && <span className="text-dim">working…</span>}
+        </div>
 
-      <RepoTabs />
+        <RepoTabs />
 
-      <div className="app-header-right">
-        <button className="ghost" disabled={busy} onClick={openRepoViaPicker}>
-          Open…
-        </button>
-        {repo && (
-          <button className="ghost" disabled={busy} onClick={() => closeRepo(repo.id)}>
-            Close
+        <div className="app-header-right">
+          <button className="ghost" onClick={() => setShowMcp(true)} title="MCP Settings">
+            ⚙ MCP
           </button>
-        )}
-      </div>
-    </header>
+          <button className="ghost" disabled={busy} onClick={openRepoViaPicker}>
+            Open…
+          </button>
+          {repo && (
+            <button className="ghost" disabled={busy} onClick={() => closeRepo(repo.id)}>
+              Close
+            </button>
+          )}
+        </div>
+      </header>
+      <McpPanel isOpen={showMcp} onClose={() => setShowMcp(false)} />
+    </>
   );
 }
 

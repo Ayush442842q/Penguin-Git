@@ -10,7 +10,10 @@ pub mod conflict;
 pub mod diff;
 pub mod exec;
 pub mod log;
+pub mod mcp_event;
+pub mod mcp_ipc;
 pub mod merge_state;
+
 pub mod rebase;
 pub mod remote;
 pub mod repo;

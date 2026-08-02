@@ -13,8 +13,11 @@ dist-ssr
 *.local
 
 # Rust / Tauri build output
+target/
 src-tauri/target
 src-tauri/gen
+scratch/
+
 
 # Editor directories and files
 .vscode/*

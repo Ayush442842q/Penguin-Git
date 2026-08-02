@@ -11,12 +11,19 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())
         .manage(WatcherRegistry::new())
+        .setup(|app| {
+            core::mcp_ipc::start_mcp_event_listeners(app.handle().clone());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // repo
             commands::repo::open_repo,
             commands::repo::list_open_repos,
             commands::repo::close_repo,
             commands::repo::repo_path_for,
+            // mcp
+            commands::mcp::get_mcp_status,
+            commands::mcp::set_mcp_enabled,
             // status
             commands::status::get_git_status,
             // log / graph

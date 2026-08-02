@@ -74,11 +74,15 @@ export const BRIDGE_FUNCTIONS = [
   "getSubmodules",
   "initSubmodule",
   "updateSubmodule",
+  "getMcpStatus",
+  "setMcpEnabled",
+  "onMcpEvent",
 ];
 
 export function makeBridgeMock() {
   const mock = {
     REPO_CHANGED_EVENT: "repo-changed",
+    MCP_EVENT: "mcp-event",
     DEFAULT_LOG_LIMIT: 500,
   };
   for (const name of BRIDGE_FUNCTIONS) {
@@ -89,5 +93,6 @@ export function makeBridgeMock() {
   );
   // Subscribing returns an unlisten function, not a plain resolve.
   mock.onRepoChanged = vi.fn(() => Promise.resolve(() => {}));
+  mock.onMcpEvent = vi.fn(() => Promise.resolve(() => {}));
   return mock;
 }
