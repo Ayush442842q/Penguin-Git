@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AiPanel from "./AiPanel";
+import GitHubPanel from "./GitHubPanel";
 import "./Settings.css";
 
 export default function Settings({ isOpen, onClose }) {
@@ -25,7 +26,10 @@ export default function Settings({ isOpen, onClose }) {
             >
               <span>🤖</span> AI Assistant
             </button>
-            <button className="settings-nav-item" disabled title="Coming in Phase 6">
+            <button
+              className={`settings-nav-item ${activeTab === "github" ? "active" : ""}`}
+              onClick={() => setActiveTab("github")}
+            >
               <span>🐙</span> GitHub Integration
             </button>
             <button className="settings-nav-item" disabled title="Coming in Phase 7">
@@ -33,7 +37,10 @@ export default function Settings({ isOpen, onClose }) {
             </button>
           </div>
 
-          <div className="settings-content">{activeTab === "ai" && <AiPanel />}</div>
+          <div className="settings-content">
+            {activeTab === "ai" && <AiPanel />}
+            {activeTab === "github" && <GitHubPanel />}
+          </div>
         </div>
       </div>
     </div>

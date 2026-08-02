@@ -12,6 +12,7 @@ import { RebaseDialog } from "./components/RebaseDialog/RebaseDialog";
 import { UndoToast } from "./components/UndoToast/UndoToast";
 import Settings from "./components/Settings/Settings";
 import McpPanel from "./components/McpPanel/McpPanel";
+import Launchpad from "./components/Launchpad/Launchpad";
 import "./App.css";
 
 function Header() {
@@ -22,6 +23,7 @@ function Header() {
   const closeRepo = useRepoStore((s) => s.closeRepo);
   const [showMcp, setShowMcp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLaunchpad, setShowLaunchpad] = useState(false);
 
   const status = slice?.status;
   const repo = slice?.repo;
@@ -46,6 +48,9 @@ function Header() {
         <RepoTabs />
 
         <div className="app-header-right">
+          <button className="ghost" onClick={() => setShowLaunchpad(true)} title="Launchpad">
+            🚀 Launchpad
+          </button>
           <button className="ghost" onClick={() => setShowSettings(true)} title="Settings">
             ⚙ Settings
           </button>
@@ -64,6 +69,7 @@ function Header() {
       </header>
       <McpPanel isOpen={showMcp} onClose={() => setShowMcp(false)} />
       <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <Launchpad isOpen={showLaunchpad} onClose={() => setShowLaunchpad(false)} />
     </>
   );
 }
@@ -187,6 +193,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Launcher />} />
         <Route path="/repo/:repoId" element={<RepoView />} />
+        <Route path="/launchpad" element={<Launchpad />} />
       </Routes>
     </HashRouter>
   );

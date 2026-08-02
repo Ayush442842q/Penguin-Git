@@ -1,0 +1,121 @@
+.github-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.github-panel-header h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-fg, #e1e4e8);
+}
+
+.github-panel-header p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-fg-dim, #8b949e);
+  line-height: 1.4;
+}
+
+.github-status-msg {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.github-status-msg.success {
+  background: rgba(46, 160, 67, 0.15);
+  border: 1px solid rgba(46, 160, 67, 0.4);
+  color: #3fb950;
+}
+
+.github-status-msg.error {
+  background: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  color: #f85149;
+}
+
+.github-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.github-form-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-fg, #c9d1d9);
+}
+
+.github-input {
+  background: var(--color-bg-subtle, #161b22);
+  border: 1px solid var(--color-border, #30363d);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  color: var(--color-fg, #c9d1d9);
+  font-size: 0.9rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.github-input:focus {
+  outline: none;
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+}
+
+.github-key-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-fg-dim, #8b949e);
+}
+
+.origin-display {
+  background: var(--color-bg-subtle, #161b22);
+  border: 1px solid var(--color-border, #30363d);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.875rem;
+}
+
+.origin-badge {
+  color: var(--color-fg, #e1e4e8);
+}
+
+.key-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.key-badge.saved {
+  background: rgba(46, 160, 67, 0.2);
+  color: #3fb950;
+}
+
+.key-badge.missing {
+  background: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #f85149;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  margin-left: auto;
+}
+
+.github-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}

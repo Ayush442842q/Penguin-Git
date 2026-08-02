@@ -86,6 +86,16 @@ export const BRIDGE_FUNCTIONS = [
   "aiGeneratePrDescription",
   "getBranchDiff",
   "gitStageHunk",
+  "saveGithubToken",
+  "getGithubToken",
+  "deleteGithubToken",
+  "testGithubConnection",
+  "getRepoOrigin",
+  "githubSearchPrs",
+  "githubGetLaunchpadItems",
+  "githubGetPr",
+  "githubCreatePr",
+  "startWorkOnIssue",
 ];
 
 export function makeBridgeMock() {
