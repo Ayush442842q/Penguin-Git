@@ -102,6 +102,25 @@ describe("DiffViewer", () => {
       await waitFor(() => expect(bridge.getUntrackedDiff).toHaveBeenCalledWith("/repo", "new.txt"));
       expect(bridge.getFileDiff).not.toHaveBeenCalled();
     });
+
+    it("renders stage hunk button for unstaged file and invokes gitStageHunk on click", async () => {
+      bridge.getFileDiff.mockResolvedValue(SAMPLE_DIFF);
+      setStore({ selectedFile: { path: "a.txt", staged: false, untracked: false } });
+
+      render(<DiffViewer />);
+
+      await waitFor(() => expect(screen.getByText("+ Stage Hunk")).toBeInTheDocument());
+
+      const stageBtn = screen.getByText("+ Stage Hunk");
+      fireEvent.click(stageBtn);
+
+      await waitFor(() => {
+        expect(bridge.gitStageHunk).toHaveBeenCalledWith(
+          "/repo",
+          expect.stringContaining("diff --git a/a.txt b/a.txt")
+        );
+      });
+    });
   });
 
   describe("tabs", () => {

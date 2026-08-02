@@ -326,6 +326,14 @@ export const useRepoStore = create((set, get) => ({
     });
   },
 
+  stageHunk: async (patch) => {
+    const activeSlice = get().getActiveSlice();
+    if (!activeSlice || !activeSlice.repo) return false;
+    return get().run(async () => {
+      await git.gitStageHunk(activeSlice.repo.path, patch);
+    });
+  },
+
   refresh: async (targetRepoId = get().activeRepoId) => {
     if (!targetRepoId) return;
     const targetSlice = get().repos[targetRepoId];
