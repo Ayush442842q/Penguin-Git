@@ -7,6 +7,7 @@ import {
   listWorkspaceRepos,
   addRepoToWorkspace,
   removeRepoFromWorkspace,
+  cloudCreateWorkspace,
 } from "../../services/tauriBridge";
 import "./Workspaces.css";
 
@@ -18,6 +19,7 @@ export default function Workspaces({ onOpenRepo, isCloudConfigured = false, onSh
   const [newWsName, setNewWsName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [shareSuccess, setShareSuccess] = useState("");
 
   const fetchWorkspaces = async () => {
     const list = await listWorkspaces();
@@ -118,6 +120,20 @@ export default function Workspaces({ onOpenRepo, isCloudConfigured = false, onSh
     }
   };
 
+  const handleShareToCloud = async (ws) => {
+    try {
+      if (onShareToCloud) {
+        await onShareToCloud(ws);
+      } else {
+        await cloudCreateWorkspace(ws.name);
+      }
+      setShareSuccess(`Workspace "${ws.name}" published to Cloud Server!`);
+      setTimeout(() => setShareSuccess(""), 4000);
+    } catch (err) {
+      setError(`Failed to share workspace to Cloud: ${err.message || String(err)}`);
+    }
+  };
+
   const selectedWs = workspaces.find((w) => w.id === selectedWsId);
   const availableToAdd = recentRepos.filter((r) => !wsRepos.some((wr) => wr.id === r.id));
 
@@ -132,6 +148,7 @@ export default function Workspaces({ onOpenRepo, isCloudConfigured = false, onSh
           {error} (click to dismiss)
         </div>
       )}
+      {shareSuccess && <div className="workspaces-success-banner">{shareSuccess}</div>}
 
       <div className="workspaces-layout">
         {/* Left Sidebar: Workspace List */}
@@ -187,15 +204,13 @@ export default function Workspaces({ onOpenRepo, isCloudConfigured = false, onSh
                     Created {new Date(selectedWs.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                {isCloudConfigured && onShareToCloud && (
-                  <button
-                    className="btn-secondary-sm"
-                    onClick={() => onShareToCloud(selectedWs)}
-                    title="Share workspace to Cloud backend"
-                  >
-                    ☁️ Share to Cloud
-                  </button>
-                )}
+                <button
+                  className="btn-secondary-sm"
+                  onClick={() => handleShareToCloud(selectedWs)}
+                  title="Share workspace to Cloud backend"
+                >
+                  ☁️ Share to Cloud
+                </button>
               </div>
 
               <div className="workspace-section">
