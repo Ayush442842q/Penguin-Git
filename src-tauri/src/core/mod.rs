@@ -27,6 +27,7 @@ pub mod status;
 pub mod submodule;
 pub mod undo;
 pub mod watcher;
+pub mod workspace;
 pub mod worktree;
 
 #[cfg(test)]
