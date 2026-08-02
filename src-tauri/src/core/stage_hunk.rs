@@ -57,7 +57,7 @@ mod tests {
         assert!(full_diff.contains("Line 10 CHANGED"));
 
         // Construct a valid patch for ONLY the first hunk
-        let patch = vec![
+        let patch = [
             format!("diff --git a/{file_name} b/{file_name}"),
             format!("--- a/{file_name}"),
             format!("+++ b/{file_name}"),
