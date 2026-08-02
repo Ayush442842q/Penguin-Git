@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod core;
+pub mod github;
 
 use commands::repo::WatcherRegistry;
 use core::repo::AppState;
