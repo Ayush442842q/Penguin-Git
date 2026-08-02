@@ -29,3 +29,6 @@ src-tauri/gen
 
 # AI tooling
 .claude/
+
+#intros
+videos/

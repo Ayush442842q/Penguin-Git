@@ -380,4 +380,162 @@ mod tests {
         assert_eq!(stashes[1].message, "older");
         assert_eq!(stashes[1].index, 1);
     }
+
+    // -- Subject and selector parsing ---------------------------------------
+
+    #[test]
+    fn selector_index_is_read_from_the_reflog_name() {
+        assert_eq!(parse_selector_index("stash@{0}"), Some(0));
+        assert_eq!(parse_selector_index("stash@{12}"), Some(12));
+        assert_eq!(parse_selector_index("stash@{}"), None);
+        assert_eq!(parse_selector_index("nonsense"), None);
+    }
+
+    #[test]
+    fn stash_subject_splits_both_of_gits_prefixes() {
+        // `stash push` with no message produces "WIP on <branch>: <sha> <subject>";
+        // with one it produces "On <branch>: <message>".
+        assert_eq!(
+            split_stash_subject("WIP on main: 1a2b3c4 Previous commit"),
+            ("main".to_string(), "1a2b3c4 Previous commit".to_string())
+        );
+        assert_eq!(
+            split_stash_subject("On feature/login: my message"),
+            ("feature/login".to_string(), "my message".to_string())
+        );
+    }
+
+    #[test]
+    fn an_unrecognised_stash_subject_is_kept_verbatim() {
+        // Better to show the raw text than to invent a branch and lose the message.
+        let (branch, message) = split_stash_subject("something unexpected");
+        assert_eq!(branch, "something unexpected");
+        assert_eq!(message, "something unexpected");
+    }
+
+    #[test]
+    fn a_stash_saved_without_a_message_still_names_its_branch() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "one\n", "The previous commit");
+        repo.write("a.txt", "two\n");
+
+        save_stash(repo.path(), None, false).expect("stash");
+
+        let stashes = list_stashes(repo.path()).expect("list");
+        assert_eq!(stashes[0].branch, "main");
+        assert!(
+            stashes[0].message.contains("The previous commit"),
+            "the generated message names the commit it was based on, got: {}",
+            stashes[0].message
+        );
+    }
+
+    #[test]
+    fn a_blank_message_falls_back_to_gits_generated_one() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "one\n", "Base");
+        repo.write("a.txt", "two\n");
+
+        save_stash(repo.path(), Some("   "), false).expect("stash");
+
+        // Whitespace-only is treated as "no message" rather than passed to `-m`,
+        // which would produce a stash entry labelled with nothing at all.
+        assert_eq!(list_stashes(repo.path()).expect("list")[0].branch, "main");
+    }
+
+    #[test]
+    fn every_stash_carries_a_hash_and_timestamp() {
+        let repo = repo_with_a_stash();
+
+        let stash = &list_stashes(repo.path()).expect("list")[0];
+
+        assert_eq!(stash.hash.len(), 40, "got: {}", stash.hash);
+        assert!(stash.hash.chars().all(|c| c.is_ascii_hexdigit()));
+        assert!(stash.timestamp > 0);
+    }
+
+    #[test]
+    fn listing_an_empty_stash_stack_returns_nothing() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+
+        assert!(list_stashes(repo.path()).expect("list").is_empty());
+    }
+
+    // -- Optimistic-concurrency guard ---------------------------------------
+
+    #[test]
+    fn apply_and_pop_also_refuse_a_stale_hash() {
+        // `drop` is covered separately; apply and pop restore the *wrong* work
+        // instead of destroying it, which is just as bad and easier to miss.
+        for op in ["apply", "pop"] {
+            let repo = FixtureRepo::new();
+            repo.commit("a.txt", "base\n", "Initial commit");
+            repo.write("a.txt", "first\n");
+            save_stash(repo.path(), Some("older"), false).expect("stash");
+            let stale_hash = stash_hash(&repo, 0);
+
+            repo.write("a.txt", "second\n");
+            save_stash(repo.path(), Some("newer"), false).expect("stash");
+
+            let result = match op {
+                "apply" => apply_stash(repo.path(), 0, &stale_hash),
+                _ => pop_stash(repo.path(), 0, &stale_hash),
+            };
+
+            let Err(err) = result else {
+                panic!("{op} on a stale index must be refused");
+            };
+            assert!(err.to_string().contains("changed since it was loaded"));
+            assert_eq!(
+                list_stashes(repo.path()).expect("list").len(),
+                2,
+                "{op} must not have touched the stack"
+            );
+        }
+    }
+
+    #[test]
+    fn the_stale_stash_error_names_both_hashes() {
+        // The user needs to see that the list moved, not just that something failed.
+        let repo = repo_with_a_stash();
+        let actual = stash_hash(&repo, 0);
+
+        let Err(err) = drop_stash(repo.path(), 0, "0000000000000000000000000000000000000000")
+        else {
+            panic!("a mismatched hash must be refused");
+        };
+        let message = err.to_string();
+        assert!(message.contains(&actual[..7]), "got: {message}");
+        assert!(message.contains("0000000"), "got: {message}");
+        assert!(message.contains("Refresh"), "got: {message}");
+    }
+
+    #[test]
+    fn acting_on_an_index_past_the_end_of_the_stack_fails() {
+        let repo = repo_with_a_stash();
+
+        assert!(drop_stash(repo.path(), 9, "whatever").is_err());
+        assert!(stash_diff(repo.path(), 9).is_err());
+        assert_eq!(list_stashes(repo.path()).expect("list").len(), 1);
+    }
+
+    #[test]
+    fn the_correct_entry_is_acted_on_when_the_index_is_current() {
+        // The guard must not be so strict it blocks legitimate work: dropping the
+        // *older* entry by its real index and hash has to succeed and leave the
+        // newer one alone.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "base\n", "Initial commit");
+        repo.write("a.txt", "first\n");
+        save_stash(repo.path(), Some("older"), false).expect("stash");
+        repo.write("a.txt", "second\n");
+        save_stash(repo.path(), Some("newer"), false).expect("stash");
+
+        drop_stash(repo.path(), 1, &stash_hash(&repo, 1)).expect("dropping the older entry");
+
+        let remaining = list_stashes(repo.path()).expect("list");
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].message, "newer");
+    }
 }

@@ -339,10 +339,7 @@ mod tests {
         repo.commit_all("Change on main");
 
         // Expected to fail — that's the point, it leaves the tree conflicted.
-        let _ = std::process::Command::new("git")
-            .current_dir(repo.path())
-            .args(["merge", "other"])
-            .output();
+        let _ = crate::core::branch::merge_branch(repo.path(), "other");
 
         let status = get_status(repo.path()).expect("status should succeed mid-merge");
 
@@ -385,5 +382,198 @@ mod tests {
     fn detached_head_reports_no_branch() {
         let raw = "# branch.oid abc123\0# branch.head (detached)\0";
         assert_eq!(parse_porcelain_v2(raw).branch, None);
+    }
+
+    // -- Change-kind mapping -------------------------------------------------
+
+    /// An ordinary (`1`) record with the given XY pair, for one path.
+    fn ordinary(xy: &str, path: &str) -> String {
+        format!("1 {xy} N... 100644 100644 100644 aaaaaaa bbbbbbb {path}\0")
+    }
+
+    #[test]
+    fn every_porcelain_status_letter_maps_to_a_change_kind() {
+        let cases = [
+            ("A.", ChangeKind::Added),
+            ("M.", ChangeKind::Modified),
+            ("D.", ChangeKind::Deleted),
+            ("R.", ChangeKind::Renamed),
+            ("C.", ChangeKind::Copied),
+            ("T.", ChangeKind::TypeChanged),
+        ];
+
+        for (xy, expected) in cases {
+            let status = parse_porcelain_v2(&ordinary(xy, "f.txt"));
+            assert_eq!(
+                status.staged.first().map(|e| e.kind),
+                Some(expected),
+                "staged half of {xy:?}"
+            );
+            assert!(
+                status.unstaged.is_empty(),
+                "'.' in the unstaged column means no worktree change"
+            );
+        }
+    }
+
+    #[test]
+    fn a_file_changed_in_both_columns_appears_in_both_lists() {
+        // `MM` is "staged modification, plus further unstaged edits on top" — the
+        // staging UI has to show it in each list independently, not pick one.
+        let status = parse_porcelain_v2(&ordinary("MM", "both.txt"));
+
+        assert_eq!(status.staged.len(), 1);
+        assert_eq!(status.unstaged.len(), 1);
+        assert_eq!(status.staged[0].path, "both.txt");
+        assert_eq!(status.unstaged[0].path, "both.txt");
+        assert!(!status.is_clean());
+    }
+
+    #[test]
+    fn an_unstaged_only_change_is_not_reported_as_staged() {
+        let status = parse_porcelain_v2(&ordinary(".M", "worktree-only.txt"));
+
+        assert!(status.staged.is_empty());
+        assert_eq!(status.unstaged.len(), 1);
+        assert_eq!(status.unstaged[0].kind, ChangeKind::Modified);
+    }
+
+    #[test]
+    fn ignored_files_are_never_surfaced() {
+        // Listing ignored files would drown the real changes — build output alone
+        // can run to thousands of paths.
+        let raw = "! target/debug/penguingit\0! node_modules/react/index.js\0? real.txt\0";
+
+        let status = parse_porcelain_v2(raw);
+
+        assert_eq!(status.untracked.len(), 1);
+        assert_eq!(status.untracked[0].path, "real.txt");
+    }
+
+    #[test]
+    fn unrecognised_records_are_skipped_rather_than_derailing_the_parse() {
+        // Forward-compatibility: a future git adding a record type must not cost
+        // us the records around it.
+        let raw = format!(
+            "x some future record\0{}? after.txt\0",
+            ordinary("M.", "before.txt")
+        );
+
+        let status = parse_porcelain_v2(&raw);
+
+        assert_eq!(status.staged.len(), 1);
+        assert_eq!(status.staged[0].path, "before.txt");
+        assert_eq!(status.untracked[0].path, "after.txt");
+    }
+
+    #[test]
+    fn a_copy_carries_its_source_and_similarity_score() {
+        let raw = "2 C. N... 100644 100644 100644 aaaaaaa bbbbbbb C75 copy.txt\0original.txt\0";
+
+        let status = parse_porcelain_v2(raw);
+
+        let copied = &status.staged[0];
+        assert_eq!(copied.kind, ChangeKind::Copied);
+        assert_eq!(copied.path, "copy.txt");
+        assert_eq!(copied.original_path.as_deref(), Some("original.txt"));
+        assert_eq!(copied.similarity, Some(75));
+    }
+
+    #[test]
+    fn a_renamed_path_containing_spaces_keeps_both_halves() {
+        // The original path is a *separate* NUL field, which is exactly what
+        // porcelain v1's `R old -> new` cannot express unambiguously.
+        let raw = "2 R. N... 100644 100644 100644 aaaaaaa bbbbbbb R100 docs/new name.md\0docs/old name.md\0";
+
+        let status = parse_porcelain_v2(raw);
+
+        assert_eq!(status.staged[0].path, "docs/new name.md");
+        assert_eq!(
+            status.staged[0].original_path.as_deref(),
+            Some("docs/old name.md")
+        );
+    }
+
+    #[test]
+    fn a_malformed_branch_header_does_not_poison_the_counts() {
+        let raw = "# branch.ab garbage\0# branch.head main\0";
+
+        let status = parse_porcelain_v2(raw);
+
+        assert_eq!((status.ahead, status.behind), (0, 0));
+        assert_eq!(status.branch.as_deref(), Some("main"));
+    }
+
+    // -- Against a real repository ------------------------------------------
+
+    #[test]
+    fn a_deleted_file_is_reported_as_deleted() {
+        let repo = FixtureRepo::new();
+        repo.commit("gone.txt", "bye\n", "Initial commit");
+        std::fs::remove_file(repo.file_path("gone.txt")).expect("remove");
+
+        let status = get_status(repo.path()).expect("status");
+
+        assert_eq!(status.unstaged.len(), 1);
+        assert_eq!(status.unstaged[0].kind, ChangeKind::Deleted);
+        assert_eq!(status.unstaged[0].path, "gone.txt");
+    }
+
+    #[test]
+    fn replacing_a_file_with_a_symlink_reports_a_type_change() {
+        let repo = FixtureRepo::new();
+        repo.commit("link.txt", "regular file\n", "Initial commit");
+        std::fs::remove_file(repo.file_path("link.txt")).expect("remove");
+        std::os::unix::fs::symlink("/etc/hostname", repo.file_path("link.txt"))
+            .expect("create symlink");
+
+        let status = get_status(repo.path()).expect("status");
+
+        assert_eq!(status.unstaged.len(), 1);
+        assert_eq!(status.unstaged[0].kind, ChangeKind::TypeChanged);
+    }
+
+    #[test]
+    fn nested_untracked_files_are_listed_individually() {
+        // `--untracked-files=all` rather than the default `normal`, which collapses
+        // a new directory to a single entry the user cannot stage selectively.
+        let repo = FixtureRepo::new();
+        repo.commit("seed.txt", "x", "Initial commit");
+        repo.write("new-dir/one.txt", "1");
+        repo.write("new-dir/nested/two.txt", "2");
+
+        let status = get_status(repo.path()).expect("status");
+
+        let mut paths: Vec<&str> = status.untracked.iter().map(|e| e.path.as_str()).collect();
+        paths.sort_unstable();
+        assert_eq!(paths, vec!["new-dir/nested/two.txt", "new-dir/one.txt"]);
+    }
+
+    #[test]
+    fn detached_head_on_a_real_repo_reports_no_branch() {
+        let repo = FixtureRepo::new();
+        let sha = repo.commit("a.txt", "x", "Initial commit");
+        repo.git(&["checkout", "--detach", &sha]);
+
+        let status = get_status(repo.path()).expect("status");
+
+        assert_eq!(status.branch, None);
+        assert!(status.is_clean());
+    }
+
+    #[test]
+    fn a_repo_with_no_commits_reports_its_staged_files() {
+        // Before the first commit there is no HEAD to diff against; git reports
+        // everything staged as an addition. The very first commit a user makes
+        // goes through this path.
+        let repo = FixtureRepo::new();
+        repo.write("first.txt", "hello");
+        repo.git(&["add", "first.txt"]);
+
+        let status = get_status(repo.path()).expect("status must work before the first commit");
+
+        assert_eq!(status.staged.len(), 1);
+        assert_eq!(status.staged[0].kind, ChangeKind::Added);
+        assert_eq!(status.branch.as_deref(), Some("main"));
     }
 }

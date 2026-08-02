@@ -115,7 +115,7 @@ pub fn push(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::test_support::FixtureRepo;
+    use crate::core::test_support::{git_in, FixtureRepo};
 
     #[test]
     fn lists_a_remote_once_not_twice() {
@@ -184,16 +184,171 @@ mod tests {
         push(repo.path(), Some("origin"), Some("main"), true).expect("push");
 
         // The bare repo should now hold the same commit.
-        let remote_head = std::process::Command::new("git")
-            .current_dir(bare.path())
-            .args(["rev-parse", "main"])
-            .output()
-            .expect("rev-parse in bare repo");
-        let remote_head = String::from_utf8_lossy(&remote_head.stdout)
-            .trim()
-            .to_string();
-        assert_eq!(remote_head, repo.head());
+        let remote_head = git_in(bare.path(), &["rev-parse", "main"]);
+        assert_eq!(remote_head.trim(), repo.head());
 
         fetch(repo.path(), Some("origin")).expect("fetch");
+    }
+
+    #[test]
+    fn a_repo_with_no_remotes_lists_nothing() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+
+        assert!(list_remotes(repo.path()).expect("list").is_empty());
+    }
+
+    #[test]
+    fn a_separate_push_url_is_kept_alongside_the_fetch_url() {
+        // `remote -v` prints one line per direction. Folding them naively would
+        // either duplicate the remote or lose whichever URL came second.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        add_remote(
+            repo.path(),
+            "origin",
+            "https://example.invalid/read-only.git",
+        )
+        .expect("add");
+        repo.git(&[
+            "remote",
+            "set-url",
+            "--push",
+            "origin",
+            "git@example.invalid:writable.git",
+        ]);
+
+        let remotes = list_remotes(repo.path()).expect("list");
+
+        assert_eq!(remotes.len(), 1, "still one remote, not two");
+        assert_eq!(
+            remotes[0].fetch_url,
+            "https://example.invalid/read-only.git"
+        );
+        assert_eq!(remotes[0].push_url, "git@example.invalid:writable.git");
+    }
+
+    #[test]
+    fn several_remotes_are_each_listed_once() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        add_remote(repo.path(), "origin", "https://example.invalid/fork.git").expect("add");
+        add_remote(
+            repo.path(),
+            "upstream",
+            "https://example.invalid/canonical.git",
+        )
+        .expect("add");
+
+        let remotes = list_remotes(repo.path()).expect("list");
+
+        let mut names: Vec<&str> = remotes.iter().map(|r| r.name.as_str()).collect();
+        names.sort_unstable();
+        assert_eq!(names, vec!["origin", "upstream"]);
+    }
+
+    #[test]
+    fn adding_a_remote_that_already_exists_is_an_error() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        add_remote(repo.path(), "origin", "https://example.invalid/one.git").expect("add");
+
+        assert!(add_remote(repo.path(), "origin", "https://example.invalid/two.git").is_err());
+        assert_eq!(
+            list_remotes(repo.path()).expect("list")[0].fetch_url,
+            "https://example.invalid/one.git",
+            "the failed add must not have overwritten the URL"
+        );
+    }
+
+    #[test]
+    fn removing_an_unknown_remote_is_an_error() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+
+        assert!(remove_remote(repo.path(), "nope").is_err());
+        assert!(rename_remote(repo.path(), "nope", "other").is_err());
+        assert!(set_remote_url(repo.path(), "nope", "https://example.invalid/x.git").is_err());
+    }
+
+    #[test]
+    fn fetch_prunes_a_deleted_remote_branch() {
+        // Without `--prune`, a branch deleted on the remote lingers in the local
+        // branch list indefinitely and the user can never make it go away.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        let bare = repo.add_bare_remote("origin");
+        push(repo.path(), Some("origin"), Some("main"), true).expect("push main");
+        repo.git(&["checkout", "-b", "temporary"]);
+        repo.commit_all("Work on the temporary branch");
+        push(repo.path(), Some("origin"), Some("temporary"), true).expect("push temporary");
+        repo.git(&["checkout", "main"]);
+
+        assert!(repo.git(&["branch", "-r"]).contains("origin/temporary"));
+
+        // Delete it on the remote side, the way another clone would.
+        git_in(bare.path(), &["branch", "-D", "temporary"]);
+
+        fetch(repo.path(), Some("origin")).expect("fetch");
+
+        assert!(
+            !repo.git(&["branch", "-r"]).contains("origin/temporary"),
+            "the stale remote-tracking ref should have been pruned"
+        );
+    }
+
+    #[test]
+    fn fetch_without_a_named_remote_covers_every_remote() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        let _origin = repo.add_bare_remote("origin");
+        let _upstream = repo.add_bare_remote("upstream");
+        push(repo.path(), Some("origin"), Some("main"), true).expect("push");
+
+        fetch(repo.path(), None).expect("fetch --all must not fail on a second remote");
+    }
+
+    #[test]
+    fn push_without_upstream_flag_uses_the_tracking_branch() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        let bare = repo.add_bare_remote("origin");
+        push(repo.path(), Some("origin"), Some("main"), true).expect("first push sets upstream");
+
+        repo.commit("b.txt", "y", "Second");
+        // No remote, no branch, no -u: git falls back to the configured upstream.
+        push(repo.path(), None, None, false).expect("second push");
+
+        assert_eq!(
+            git_in(bare.path(), &["rev-parse", "main"]).trim(),
+            repo.head()
+        );
+    }
+
+    #[test]
+    fn pull_brings_down_a_commit_made_elsewhere() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        let bare = repo.add_bare_remote("origin");
+        push(repo.path(), Some("origin"), Some("main"), true).expect("push");
+
+        // A second clone stands in for "somebody else pushed".
+        let other = tempfile::tempdir().expect("tempdir");
+        let bare_url = bare.path().to_string_lossy().to_string();
+        for args in [
+            vec!["clone", bare_url.as_str(), "."],
+            vec!["config", "user.name", "Other Dev"],
+            vec!["config", "user.email", "other@penguingit.invalid"],
+            vec!["commit", "--allow-empty", "-m", "Work from elsewhere"],
+            vec!["push", "origin", "main"],
+        ] {
+            git_in(other.path(), &args);
+        }
+
+        pull(repo.path()).expect("pull");
+
+        assert!(repo
+            .git(&["log", "--oneline"])
+            .contains("Work from elsewhere"));
     }
 }

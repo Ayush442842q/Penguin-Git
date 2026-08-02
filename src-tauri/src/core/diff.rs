@@ -253,4 +253,169 @@ mod tests {
 
         assert!(diff.contains("+brand new line"));
     }
+
+    // -- Blame parsing -------------------------------------------------------
+
+    /// One `--line-porcelain` block: header, headers, then the TAB-prefixed content.
+    fn blame_block(hash: &str, line: usize, content: &str) -> String {
+        format!(
+            "{hash} {line} {line} 1\n\
+             author Ada Lovelace\n\
+             author-mail <ada@example.invalid>\n\
+             author-time 1700000000\n\
+             author-tz +0000\n\
+             summary the summary line\n\
+             filename a.txt\n\
+             \t{content}\n"
+        )
+    }
+
+    const HASH_A: &str = "1111111111111111111111111111111111111111";
+
+    #[test]
+    fn parse_blame_handles_an_empty_file() {
+        assert!(parse_blame("").is_empty());
+    }
+
+    #[test]
+    fn parse_blame_keeps_leading_whitespace_in_the_content() {
+        // Only the first TAB is git's delimiter. Trimming further would silently
+        // reindent every blamed line of an indented file.
+        let raw = blame_block(HASH_A, 1, "    indented with spaces")
+            + &blame_block(HASH_A, 2, "\tindented with a tab");
+
+        let lines = parse_blame(&raw);
+
+        assert_eq!(lines[0].content, "    indented with spaces");
+        assert_eq!(lines[1].content, "\tindented with a tab");
+    }
+
+    #[test]
+    fn parse_blame_keeps_an_empty_line() {
+        let raw = blame_block(HASH_A, 1, "");
+
+        let lines = parse_blame(&raw);
+
+        assert_eq!(lines.len(), 1, "a blank line still belongs to a commit");
+        assert_eq!(lines[0].content, "");
+        assert_eq!(lines[0].line_number, 1);
+    }
+
+    #[test]
+    fn parse_blame_reads_the_header_fields() {
+        let lines = parse_blame(&blame_block(HASH_A, 7, "let x = 1;"));
+
+        assert_eq!(lines[0].hash, HASH_A);
+        assert_eq!(lines[0].author_name, "Ada Lovelace");
+        assert_eq!(lines[0].timestamp, 1_700_000_000);
+        assert_eq!(lines[0].summary, "the summary line");
+        assert_eq!(lines[0].line_number, 7);
+    }
+
+    #[test]
+    fn parse_blame_does_not_mistake_content_for_a_header() {
+        // A source line that happens to start with 40 hex characters looks
+        // exactly like a blame header — the TAB prefix is what tells them apart.
+        let raw = blame_block(HASH_A, 1, "2222222222222222222222222222222222222222 1 1 1");
+
+        let lines = parse_blame(&raw);
+
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].hash, HASH_A, "the real header must still win");
+    }
+
+    #[test]
+    fn blame_on_an_uncommitted_edit_attributes_it_to_the_working_tree() {
+        // git blames not-yet-committed lines against the all-zero hash. Dropping
+        // them would leave holes in the gutter next to the user's own edits.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "committed\n", "First");
+        repo.write("a.txt", "committed\nuncommitted\n");
+
+        let lines = blame(repo.path(), "a.txt").expect("blame");
+
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[1].content, "uncommitted");
+        assert!(
+            lines[1].hash.chars().all(|c| c == '0'),
+            "an uncommitted line blames to the zero hash, got {}",
+            lines[1].hash
+        );
+    }
+
+    // -- Option-injection safety --------------------------------------------
+
+    #[test]
+    fn a_path_that_looks_like_a_flag_is_diffed_as_a_path() {
+        // `--` before the pathspec is what stops git reading `-x.txt` as an option.
+        let repo = FixtureRepo::new();
+        repo.commit("-x.txt", "original\n", "Add a file named like a flag");
+        repo.write("-x.txt", "changed\n");
+
+        let diff = diff_file(repo.path(), "-x.txt", false).expect("diff");
+
+        assert!(diff.contains("+changed"), "got: {diff}");
+    }
+
+    #[test]
+    fn file_history_works_for_a_path_that_looks_like_a_flag() {
+        let repo = FixtureRepo::new();
+        repo.commit("--cached", "content\n", "Add a confusing filename");
+
+        let history = file_history(repo.path(), "--cached", 10).expect("history");
+
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].subject, "Add a confusing filename");
+    }
+
+    // -- Diff selection ------------------------------------------------------
+
+    #[test]
+    fn diff_commit_on_a_merge_shows_only_what_the_merge_brought_in() {
+        // Without `--first-parent`, `git show` on a merge prints a combined diff
+        // that is near-unreadable and often empty for a clean merge.
+        let repo = FixtureRepo::new();
+        repo.commit("base.txt", "base\n", "Base");
+
+        repo.git(&["checkout", "-b", "feature"]);
+        repo.commit("feature.txt", "from the feature branch\n", "Feature work");
+
+        repo.git(&["checkout", "main"]);
+        repo.commit("main.txt", "mainline\n", "Mainline work");
+        repo.git(&["merge", "--no-ff", "feature", "-m", "Merge feature"]);
+
+        let diff = diff_commit(repo.path(), &repo.head()).expect("show");
+
+        assert!(
+            diff.contains("feature.txt"),
+            "the merge brought feature.txt in, got: {diff}"
+        );
+        assert!(
+            !diff.contains("main.txt"),
+            "mainline work already existed on the first parent"
+        );
+    }
+
+    #[test]
+    fn file_history_stops_at_the_limit() {
+        let repo = FixtureRepo::new();
+        for i in 0..5 {
+            repo.commit("a.txt", &format!("revision {i}\n"), &format!("Change {i}"));
+        }
+
+        let history = file_history(repo.path(), "a.txt", 2).expect("history");
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].subject, "Change 4", "newest first");
+    }
+
+    #[test]
+    fn diff_file_is_empty_when_nothing_changed() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "unchanged\n", "Initial commit");
+
+        let diff = diff_file(repo.path(), "a.txt", false).expect("diff");
+
+        assert!(diff.trim().is_empty(), "got: {diff}");
+    }
 }
