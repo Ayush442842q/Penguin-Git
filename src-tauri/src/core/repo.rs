@@ -58,14 +58,16 @@ fn default_db_path() -> PathBuf {
     let base = std::env::var("HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|_| std::env::temp_dir());
-    base.join(".config").join("penguingit").join("penguingit.db")
+    base.join(".config")
+        .join("penguingit")
+        .join("penguingit.db")
 }
 
 impl AppState {
     pub fn new() -> Self {
         let db_path = default_db_path();
-        let registry = crate::core::repo_registry::RepoRegistry::open(&db_path)
-            .unwrap_or_else(|_| {
+        let registry =
+            crate::core::repo_registry::RepoRegistry::open(&db_path).unwrap_or_else(|_| {
                 crate::core::repo_registry::RepoRegistry::open_in_memory()
                     .expect("in-memory sqlite db creation should never fail")
             });

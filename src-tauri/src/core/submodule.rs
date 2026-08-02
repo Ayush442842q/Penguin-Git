@@ -35,19 +35,10 @@ pub fn parse_gitmodules(content: &str) -> HashMap<String, SubmoduleMeta> {
         let trimmed = line.trim();
         if trimmed.starts_with('[') && trimmed.ends_with(']') {
             // Save previous section if complete
-            if let (Some(name), Some(path), Some(url)) = (
-                current_name.take(),
-                current_path.take(),
-                current_url.take(),
-            ) {
-                map.insert(
-                    path.clone(),
-                    SubmoduleMeta {
-                        name,
-                        path,
-                        url,
-                    },
-                );
+            if let (Some(name), Some(path), Some(url)) =
+                (current_name.take(), current_path.take(), current_url.take())
+            {
+                map.insert(path.clone(), SubmoduleMeta { name, path, url });
             }
             // Parse section header [submodule "name"]
             let header = &trimmed[1..trimmed.len() - 1];
@@ -139,19 +130,13 @@ pub fn get_submodules(repo_path: &Path) -> Result<Vec<SubmoduleStatus>, GitError
 
 /// Initializes a submodule in `repo_path` (`git submodule init <path>`).
 pub fn init_submodule(repo_path: &Path, submodule_path: &str) -> Result<(), GitError> {
-    run_git(
-        repo_path,
-        &["submodule", "init", "--", submodule_path],
-    )?;
+    run_git(repo_path, &["submodule", "init", "--", submodule_path])?;
     Ok(())
 }
 
 /// Updates a submodule in `repo_path` (`git submodule update <path>`).
 pub fn update_submodule(repo_path: &Path, submodule_path: &str) -> Result<(), GitError> {
-    run_git(
-        repo_path,
-        &["submodule", "update", "--", submodule_path],
-    )?;
+    run_git(repo_path, &["submodule", "update", "--", submodule_path])?;
     Ok(())
 }
 

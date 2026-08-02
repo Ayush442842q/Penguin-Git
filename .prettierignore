@@ -1,5 +1,6 @@
 dist
 node_modules
-src-tauri/target
-src-tauri/gen
+target
+src-tauri
 pnpm-lock.yaml
+scratch

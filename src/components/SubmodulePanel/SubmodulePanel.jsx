@@ -1,15 +1,9 @@
-import React from "react";
-import { useNavigate, UNSAFE_NavigationContext as NavigationContext } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useRepoStore } from "../../store/repoStore";
 import "./SubmodulePanel.css";
 
-function useSafeNavigate() {
-  const inRouter = React.useContext(NavigationContext);
-  return inRouter && inRouter.navigator ? useNavigate() : () => {};
-}
-
 export function SubmodulePanel() {
-  const navigate = useSafeNavigate();
+  const navigate = useNavigate();
 
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const slice = useRepoStore((s) => s.repos[activeRepoId]);

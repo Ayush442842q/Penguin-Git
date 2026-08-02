@@ -1,15 +1,9 @@
-import React from "react";
-import { useNavigate, UNSAFE_NavigationContext as NavigationContext } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useRepoStore } from "../../store/repoStore";
 import "./RepoTabs.css";
 
-function useSafeNavigate() {
-  const inRouter = React.useContext(NavigationContext);
-  return inRouter && inRouter.navigator ? useNavigate() : () => {};
-}
-
 export function RepoTabs() {
-  const navigate = useSafeNavigate();
+  const navigate = useNavigate();
   const repos = useRepoStore((s) => s.repos);
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const setActiveRepoId = useRepoStore((s) => s.setActiveRepoId);
