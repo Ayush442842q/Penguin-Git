@@ -285,4 +285,3 @@ describe("tauriBridge", () => {
     });
   });
 });
-

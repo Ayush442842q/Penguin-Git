@@ -3,12 +3,16 @@ import * as git from "../../services/tauriBridge";
 import "./McpPanel.css";
 
 export function McpPanel({ isOpen, onClose }) {
-  const [status, setStatus] = useState({ embeddedEnabled: false, socketPath: "/tmp/penguingit-mcp.sock" });
+  const [status, setStatus] = useState({
+    embeddedEnabled: false,
+    socketPath: "/tmp/penguingit-mcp.sock",
+  });
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      git.getMcpStatus()
+      git
+        .getMcpStatus()
         .then((res) => setStatus(res))
         .catch(() => {});
     }
@@ -66,11 +70,7 @@ export function McpPanel({ isOpen, onClose }) {
                 </p>
               </div>
               <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={status.embeddedEnabled}
-                  onChange={handleToggle}
-                />
+                <input type="checkbox" checked={status.embeddedEnabled} onChange={handleToggle} />
                 <span className="slider"></span>
               </label>
             </div>
@@ -90,14 +90,17 @@ export function McpPanel({ isOpen, onClose }) {
           <div className="mcp-section">
             <h3>External MCP Client Configuration</h3>
             <p className="text-dim">
-              To connect external AI clients (e.g., Claude Desktop) to PenguinGit MCP server, add this snippet to your <code>mcp.json</code>:
+              To connect external AI clients (e.g., Claude Desktop) to PenguinGit MCP server, add
+              this snippet to your <code>mcp.json</code>:
             </p>
 
             <div className="mcp-code-box">
               <button className="copy-btn ghost" onClick={handleCopy}>
                 {copied ? "Copied!" : "Copy"}
               </button>
-              <pre><code>{mcpConfigSnippet}</code></pre>
+              <pre>
+                <code>{mcpConfigSnippet}</code>
+              </pre>
             </div>
           </div>
         </div>

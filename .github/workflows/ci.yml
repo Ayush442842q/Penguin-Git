@@ -35,7 +35,7 @@ jobs:
         run: pnpm run format:check
 
       - name: Unit tests
-        run: pnpm test
+        run: pnpm test --run
 
   backend:
     name: Backend (fmt, clippy, test)
@@ -64,21 +64,15 @@ jobs:
           components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
 
       - name: Format check
-        working-directory: src-tauri
         run: cargo fmt --check
 
       - name: Clippy
-        working-directory: src-tauri
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test
-        working-directory: src-tauri
-        run: cargo test
+        run: cargo test --workspace
 
       - name: Check (all targets build)
-        working-directory: src-tauri
-        run: cargo check --all-targets
+        run: cargo check --workspace --all-targets

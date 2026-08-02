@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use tokio::sync::broadcast;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct McpMutationEvent {

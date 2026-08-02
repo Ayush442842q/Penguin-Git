@@ -1,16 +1,13 @@
-use std::path::Path;
+use rmcp::schemars::JsonSchema;
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::ServerInfo,
     tool, tool_handler, tool_router, ServerHandler,
 };
-use rmcp::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
-
-use penguingit_lib::core::{
-    branch, commit, diff, log, mcp_event, remote, stage, stash, status,
-};
+use penguingit_lib::core::{branch, commit, diff, log, mcp_event, remote, stage, stash, status};
 
 #[derive(Debug, Clone)]
 pub struct PenguinMcpServer {
@@ -34,10 +31,13 @@ impl Default for PenguinMcpServer {
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for PenguinMcpServer {
     fn get_info(&self) -> ServerInfo {
-        ServerInfo::new(rmcp::model::ServerCapabilities::builder().enable_tools().build())
+        ServerInfo::new(
+            rmcp::model::ServerCapabilities::builder()
+                .enable_tools()
+                .build(),
+        )
     }
 }
-
 
 // -- Input Schemas -----------------------------------------------------------
 
@@ -165,7 +165,6 @@ impl PenguinMcpServer {
         let commits = log::get_log(path, limit).map_err(|e| e.to_string())?;
         serde_json::to_string_pretty(&commits).map_err(|e| e.to_string())
     }
-
 
     #[tool(description = "Get status of working tree and index")]
     pub async fn git_status(&self, params: Parameters<GitStatusArgs>) -> Result<String, String> {

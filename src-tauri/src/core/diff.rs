@@ -30,7 +30,6 @@ pub fn diff_repo(repo_path: &Path, staged: bool) -> Result<String, GitError> {
     run_git(repo_path, &args)
 }
 
-
 /// Unified diff for an entire commit.
 ///
 /// `--first-parent` on merges keeps the output to what the merge actually

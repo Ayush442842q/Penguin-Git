@@ -421,9 +421,7 @@ export async function subscribeToRepoChanges() {
   const unlistenMcp = await git.onMcpEvent((event) => {
     const payload = event?.payload;
     if (payload?.toast) {
-      useRepoStore
-        .getState()
-        .showUndoToast(payload.toast, payload.tool || "mcp", false);
+      useRepoStore.getState().showUndoToast(payload.toast, payload.tool || "mcp", false);
     }
     useRepoStore.getState().refresh();
   });
@@ -433,4 +431,3 @@ export async function subscribeToRepoChanges() {
     unlistenMcp();
   };
 }
-

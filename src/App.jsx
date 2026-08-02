@@ -62,7 +62,6 @@ function Header() {
   );
 }
 
-
 function StatusBar() {
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const slice = useRepoStore((s) => s.repos[activeRepoId]);

@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncBufReadExt;
 use tokio::net::UnixListener;
-use tauri::{AppHandle, Emitter};
 
 use crate::core::mcp_event::{get_event_bus, McpMutationEvent, UNIX_SOCKET_PATH};
 
@@ -67,5 +67,8 @@ fn emit_mcp_event(app: &AppHandle, tool: &str, repo_path: &str) {
     });
 
     let _ = app.emit(MCP_EVENT, &payload);
-    let _ = app.emit(REPO_CHANGED_EVENT, &serde_json::json!({ "repo_path": repo_path }));
+    let _ = app.emit(
+        REPO_CHANGED_EVENT,
+        &serde_json::json!({ "repo_path": repo_path }),
+    );
 }

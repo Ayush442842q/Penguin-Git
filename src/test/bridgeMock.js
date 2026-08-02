@@ -96,4 +96,3 @@ export function makeBridgeMock() {
   mock.onMcpEvent = vi.fn(() => Promise.resolve(() => {}));
   return mock;
 }
-

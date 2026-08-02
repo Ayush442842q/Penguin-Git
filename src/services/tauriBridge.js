@@ -216,4 +216,3 @@ export const MCP_EVENT = "mcp-event";
 export const getMcpStatus = () => invoke("get_mcp_status");
 export const setMcpEnabled = (enabled) => invoke("set_mcp_enabled", { enabled });
 export const onMcpEvent = (handler) => listen(MCP_EVENT, handler);
-

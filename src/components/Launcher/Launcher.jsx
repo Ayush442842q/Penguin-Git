@@ -5,7 +5,11 @@ import "./Launcher.css";
 
 function useSafeNavigate() {
   const inRouter = React.useContext(NavigationContext);
-  return inRouter && inRouter.navigator ? useNavigate() : () => {};
+  if (!inRouter || !inRouter.navigator) {
+    return () => {};
+  }
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useNavigate();
 }
 
 export function Launcher() {
