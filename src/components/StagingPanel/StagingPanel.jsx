@@ -56,6 +56,26 @@ export default function StagingPanel() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [amend, setAmend] = useState(false);
+  const [composing, setComposing] = useState(false);
+  const [composeError, setComposeError] = useState(null);
+
+  const handleAiCompose = async () => {
+    if (!repo || status.staged.length === 0) return;
+    setComposing(true);
+    setComposeError(null);
+    try {
+      const message = await git.aiComposeCommitMessage(repo.path);
+      const lines = message.split("\n");
+      const first = lines[0] || "";
+      const rest = lines.slice(1).join("\n").trim();
+      setSubject(first.trim());
+      setBody(rest);
+    } catch (err) {
+      setComposeError(err.message || String(err));
+    } finally {
+      setComposing(false);
+    }
+  };
 
   // Amending without the previous message pre-filled means retyping it from
   // memory, and an empty box silently replaces a good message with a worse one.
@@ -260,6 +280,18 @@ export default function StagingPanel() {
       </div>
 
       <form className="commit-box" onSubmit={handleCommit}>
+        <div className="ai-compose-bar">
+          <button
+            type="button"
+            className="ai-compose-btn"
+            disabled={composing || staged.length === 0}
+            onClick={handleAiCompose}
+            title="Compose commit message from staged diff"
+          >
+            {composing ? "✨ Composing…" : subject ? "↻ Regenerate" : "✨ Compose with AI"}
+          </button>
+          {composeError && <span className="compose-error-text">{composeError}</span>}
+        </div>
         <input
           type="text"
           placeholder="Commit message"

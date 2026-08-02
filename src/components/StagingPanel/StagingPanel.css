@@ -131,3 +131,40 @@
 .amend-toggle input {
   cursor: pointer;
 }
+
+.ai-compose-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.ai-compose-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-accent-light, #818cf8);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ai-compose-btn:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.ai-compose-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.compose-error-text {
+  font-size: 11px;
+  color: var(--accent-red, #f87171);
+}
