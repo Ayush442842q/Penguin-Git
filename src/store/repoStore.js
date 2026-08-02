@@ -406,10 +406,10 @@ export const useRepoStore = create((set, get) => ({
 }));
 
 /**
- * Wires store to the Rust watcher.
+ * Wires store to the Rust watcher and MCP mutation events.
  */
 export async function subscribeToRepoChanges() {
-  return git.onRepoChanged((event) => {
+  const unlistenWatcher = await git.onRepoChanged((event) => {
     const payload = event?.payload;
     if (payload?.repo_id) {
       useRepoStore.getState().refresh(payload.repo_id);
@@ -417,4 +417,20 @@ export async function subscribeToRepoChanges() {
       useRepoStore.getState().refresh();
     }
   });
+
+  const unlistenMcp = await git.onMcpEvent((event) => {
+    const payload = event?.payload;
+    if (payload?.toast) {
+      useRepoStore
+        .getState()
+        .showUndoToast(payload.toast, payload.tool || "mcp", false);
+    }
+    useRepoStore.getState().refresh();
+  });
+
+  return () => {
+    unlistenWatcher();
+    unlistenMcp();
+  };
 }
+

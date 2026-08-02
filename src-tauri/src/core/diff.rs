@@ -21,6 +21,16 @@ pub fn diff_file(repo_path: &Path, path: &str, staged: bool) -> Result<String, G
     run_git(repo_path, &args)
 }
 
+/// Unified diff for the entire working tree or index.
+pub fn diff_repo(repo_path: &Path, staged: bool) -> Result<String, GitError> {
+    let mut args = vec!["diff", "--no-color"];
+    if staged {
+        args.push("--cached");
+    }
+    run_git(repo_path, &args)
+}
+
+
 /// Unified diff for an entire commit.
 ///
 /// `--first-parent` on merges keeps the output to what the merge actually

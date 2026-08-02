@@ -36,6 +36,8 @@ anyhow = "1"
 notify = "8"
 tempfile = "3"
 rusqlite = { version = "0.32", features = ["bundled"] }
+tokio = { version = "1", features = ["full"] }
 
 [dev-dependencies]
+
 

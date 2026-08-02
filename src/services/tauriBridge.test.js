@@ -263,5 +263,26 @@ describe("tauriBridge", () => {
       expect(listen).toHaveBeenCalledWith("repo-changed", handler);
       expect(git.REPO_CHANGED_EVENT).toBe("repo-changed");
     });
+
+    it("listens on the same event name the Rust MCP event emitter emits", () => {
+      const handler = vi.fn();
+      git.onMcpEvent(handler);
+
+      expect(listen).toHaveBeenCalledWith("mcp-event", handler);
+      expect(git.MCP_EVENT).toBe("mcp-event");
+    });
+  });
+
+  describe("mcp commands", () => {
+    it("invokes get_mcp_status", () => {
+      git.getMcpStatus();
+      expect(invoke).toHaveBeenCalledWith("get_mcp_status");
+    });
+
+    it("invokes set_mcp_enabled", () => {
+      git.setMcpEnabled(true);
+      expect(invoke).toHaveBeenCalledWith("set_mcp_enabled", { enabled: true });
+    });
   });
 });
+
