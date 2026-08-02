@@ -20,6 +20,7 @@ export default function CommitContextMenu({
   onReset,
   onTag,
   onBranch,
+  onExplainCommit,
 }) {
   const ref = useRef(null);
   const [prompt, setPrompt] = useState(null);
@@ -104,6 +105,11 @@ export default function CommitContextMenu({
           <button type="button" role="menuitem" onClick={onRevert}>
             Revert this commit
           </button>
+          {onExplainCommit && (
+            <button type="button" role="menuitem" onClick={onExplainCommit}>
+              ✨ Explain Commit with AI
+            </button>
+          )}
           <button type="button" role="menuitem" onClick={() => openPrompt("branch")}>
             Branch from here…
           </button>

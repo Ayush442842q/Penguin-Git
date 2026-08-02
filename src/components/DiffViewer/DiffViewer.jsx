@@ -31,7 +31,7 @@ const DIFF_LINE_HEIGHT = 20;
  * webview, so only the visible window is mounted — the same approach the commit
  * graph already uses.
  */
-function UnifiedDiff({ text }) {
+function UnifiedDiff({ text, filePath, canStageHunks, onStageHunk }) {
   const scrollRef = useRef(null);
   const lines = useMemo(() => (text ? text.split("\n") : []), [text]);
 
@@ -42,20 +42,56 @@ function UnifiedDiff({ text }) {
     overscan: 30,
   });
 
+  const handleStageHunk = (lineIndex) => {
+    if (!filePath || !onStageHunk) return;
+    const hunkHeader = lines[lineIndex];
+    const hunkLines = [];
+    for (let i = lineIndex + 1; i < lines.length; i++) {
+      if (lines[i].startsWith("@@") || lines[i].startsWith("diff ")) break;
+      hunkLines.push(lines[i]);
+    }
+    const patch = [
+      `diff --git a/${filePath} b/${filePath}`,
+      `--- a/${filePath}`,
+      `+++ b/${filePath}`,
+      hunkHeader,
+      ...hunkLines,
+      "",
+    ].join("\n");
+    onStageHunk(patch);
+  };
+
   if (!text?.trim()) return <p className="diff-empty text-muted">No changes to show.</p>;
 
   return (
     <div className="diff-body" ref={scrollRef}>
       <div className="diff-virtual" style={{ height: `${virtualizer.getTotalSize()}px` }}>
-        {virtualizer.getVirtualItems().map((row) => (
-          <div
-            key={row.index}
-            className={`diff-line ${lineClass(lines[row.index])}`}
-            style={{ height: `${DIFF_LINE_HEIGHT}px`, transform: `translateY(${row.start}px)` }}
-          >
-            {lines[row.index] || " "}
-          </div>
-        ))}
+        {virtualizer.getVirtualItems().map((row) => {
+          const line = lines[row.index];
+          const isHunkHeader = line && line.startsWith("@@");
+          return (
+            <div
+              key={row.index}
+              className={`diff-line ${lineClass(line)}`}
+              style={{ height: `${DIFF_LINE_HEIGHT}px`, transform: `translateY(${row.start}px)` }}
+            >
+              <span>{line || " "}</span>
+              {canStageHunks && isHunkHeader && (
+                <button
+                  type="button"
+                  className="hunk-stage-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStageHunk(row.index);
+                  }}
+                  title="Stage this hunk"
+                >
+                  + Stage Hunk
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -259,7 +295,12 @@ export default function DiffViewer() {
         ) : !fresh ? (
           <p className="diff-empty text-muted">Loading…</p>
         ) : !isFile || tab === "diff" ? (
-          <UnifiedDiff text={fresh.diff} />
+          <UnifiedDiff
+            text={fresh.diff}
+            filePath={isFile ? target.path : null}
+            canStageHunks={isFile && !target.staged && !target.untracked}
+            onStageHunk={(patch) => useRepoStore.getState().stageHunk(patch)}
+          />
         ) : tab === "history" ? (
           <HistoryView commits={fresh.history} onSelect={selectCommit} />
         ) : (

@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRepoStore } from "../../store/repoStore";
 import * as git from "../../services/tauriBridge";
 import CommitContextMenu from "./CommitContextMenu";
+import ExplainCommitModal from "../AiModals/ExplainCommitModal";
 import "./CommitGraph.css";
 
 const ROW_HEIGHT = 34;
@@ -162,6 +163,7 @@ export default function CommitGraph() {
 
   const [filter, setFilter] = useState("");
   const [menu, setMenu] = useState(null);
+  const [explainCommitHash, setExplainCommitHash] = useState(null);
   const scrollRef = useRef(null);
 
   const hasUncommittedWork =
@@ -324,10 +326,19 @@ export default function CommitGraph() {
           onClose={closeMenu}
           onCherryPick={() => runOnCommit((path, c) => git.cherryPick(path, c.hash))}
           onRevert={() => runOnCommit((path, c) => git.revertCommit(path, c.hash))}
+          onExplainCommit={() => {
+            const hash = menu.commit.hash;
+            closeMenu();
+            setExplainCommitHash(hash);
+          }}
           onReset={(mode) => runOnCommit((path, c) => git.resetToCommit(path, c.hash, mode))}
           onTag={(name) => runOnCommit((path, c) => git.createTag(path, name, c.hash, null))}
           onBranch={(name) => runOnCommit((path, c) => git.checkoutNewBranch(path, name, c.hash))}
         />
+      )}
+
+      {explainCommitHash && (
+        <ExplainCommitModal hash={explainCommitHash} onClose={() => setExplainCommitHash(null)} />
       )}
     </div>
   );

@@ -284,4 +284,42 @@ describe("tauriBridge", () => {
       expect(invoke).toHaveBeenCalledWith("set_mcp_enabled", { enabled: true });
     });
   });
+
+  describe("ai and stage hunk commands", () => {
+    it("invokes save_ai_config", () => {
+      git.saveAiConfig("anthropic", "claude-3-5-sonnet", "sk-123");
+      expect(invoke).toHaveBeenCalledWith("save_ai_config", {
+        provider: "anthropic",
+        model: "claude-3-5-sonnet",
+        apiKey: "sk-123",
+      });
+    });
+
+    it("invokes get_ai_config", () => {
+      git.getAiConfig();
+      expect(invoke).toHaveBeenCalledWith("get_ai_config");
+    });
+
+    it("invokes test_ai_connection", () => {
+      git.testAiConnection("openai", "gpt-4o", "sk-456");
+      expect(invoke).toHaveBeenCalledWith("test_ai_connection", {
+        provider: "openai",
+        model: "gpt-4o",
+        apiKey: "sk-456",
+      });
+    });
+
+    it("invokes ai_compose_commit_message", () => {
+      git.aiComposeCommitMessage("/r");
+      expect(invoke).toHaveBeenCalledWith("ai_compose_commit_message", { repoPath: "/r" });
+    });
+
+    it("invokes git_stage_hunk", () => {
+      git.gitStageHunk("/r", "patch-content");
+      expect(invoke).toHaveBeenCalledWith("git_stage_hunk", {
+        repoPath: "/r",
+        patch: "patch-content",
+      });
+    });
+  });
 });

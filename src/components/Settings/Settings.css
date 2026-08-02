@@ -1,0 +1,112 @@
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-modal {
+  width: 800px;
+  max-width: 90vw;
+  height: 600px;
+  max-height: 90vh;
+  background-color: var(--color-bg-secondary, #0f172a);
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-border, #334155);
+  background-color: var(--color-bg-primary, #020617);
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text, #f8fafc);
+}
+
+.settings-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-dim, #94a3b8);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.settings-close-btn:hover {
+  color: var(--color-text, #f8fafc);
+  background-color: var(--color-bg-tertiary, #1e293b);
+}
+
+.settings-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.settings-sidebar {
+  width: 220px;
+  background-color: var(--color-bg-primary, #020617);
+  border-right: 1px solid var(--color-border, #334155);
+  padding: 1rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.375rem;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary, #cbd5e1);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settings-nav-item:hover:not(:disabled) {
+  background-color: var(--color-bg-tertiary, #1e293b);
+  color: var(--color-text, #f8fafc);
+}
+
+.settings-nav-item.active {
+  background-color: var(--color-accent-dim, rgba(99, 102, 241, 0.15));
+  color: var(--color-accent-light, #818cf8);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.settings-nav-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.settings-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}

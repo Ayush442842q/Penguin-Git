@@ -86,6 +86,24 @@
 .diff-hunk {
   background: var(--bg-elevated);
   color: var(--accent-cyan);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hunk-stage-btn {
+  margin-right: 14px;
+  padding: 1px 8px;
+  font-size: 11px;
+  background-color: var(--color-accent, #6366f1);
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.hunk-stage-btn:hover {
+  background-color: var(--color-accent-hover, #4f46e5);
 }
 
 .diff-meta {

@@ -216,3 +216,33 @@ export const MCP_EVENT = "mcp-event";
 export const getMcpStatus = () => invoke("get_mcp_status");
 export const setMcpEnabled = (enabled) => invoke("set_mcp_enabled", { enabled });
 export const onMcpEvent = (handler) => listen(MCP_EVENT, handler);
+
+// -- ai & hunk staging --------------------------------------------------------
+
+export const saveAiConfig = (provider, model, apiKey) =>
+  invoke("save_ai_config", { provider, model, apiKey: apiKey || null });
+
+export const getAiConfig = () => invoke("get_ai_config");
+
+export const testAiConnection = (provider, model, apiKey) =>
+  invoke("test_ai_connection", {
+    provider: provider || null,
+    model: model || null,
+    apiKey: apiKey || null,
+  });
+
+export const aiComposeCommitMessage = (repoPath) =>
+  invoke("ai_compose_commit_message", { repoPath });
+
+export const aiExplainCommit = (repoPath, hash) => invoke("ai_explain_commit", { repoPath, hash });
+
+export const aiExplainBranch = (repoPath, branch, target) =>
+  invoke("ai_explain_branch", { repoPath, branch, target });
+
+export const aiGeneratePrDescription = (repoPath, branch, target) =>
+  invoke("ai_generate_pr_description", { repoPath, branch, target });
+
+export const getBranchDiff = (repoPath, branch, target) =>
+  invoke("get_branch_diff", { repoPath, branch, target });
+
+export const gitStageHunk = (repoPath, patch) => invoke("git_stage_hunk", { repoPath, patch });

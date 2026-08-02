@@ -10,6 +10,7 @@ import StagingPanel from "./components/StagingPanel/StagingPanel";
 import { ConflictEditor } from "./components/ConflictEditor/ConflictEditor";
 import { RebaseDialog } from "./components/RebaseDialog/RebaseDialog";
 import { UndoToast } from "./components/UndoToast/UndoToast";
+import Settings from "./components/Settings/Settings";
 import McpPanel from "./components/McpPanel/McpPanel";
 import "./App.css";
 
@@ -20,6 +21,7 @@ function Header() {
   const openRepoViaPicker = useRepoStore((s) => s.openRepoViaPicker);
   const closeRepo = useRepoStore((s) => s.closeRepo);
   const [showMcp, setShowMcp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const status = slice?.status;
   const repo = slice?.repo;
@@ -44,8 +46,11 @@ function Header() {
         <RepoTabs />
 
         <div className="app-header-right">
+          <button className="ghost" onClick={() => setShowSettings(true)} title="Settings">
+            ⚙ Settings
+          </button>
           <button className="ghost" onClick={() => setShowMcp(true)} title="MCP Settings">
-            ⚙ MCP
+            🔌 MCP
           </button>
           <button className="ghost" disabled={busy} onClick={openRepoViaPicker}>
             Open…
@@ -58,6 +63,7 @@ function Header() {
         </div>
       </header>
       <McpPanel isOpen={showMcp} onClose={() => setShowMcp(false)} />
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </>
   );
 }

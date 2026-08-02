@@ -4,6 +4,7 @@
 //! knowledge of Tauri's IPC layer — so it can be unit-tested in isolation and
 //! reused verbatim by the Phase 4 MCP server. See `docs/ARCHITECTURE.md`.
 
+pub mod ai;
 pub mod branch;
 pub mod commit;
 pub mod conflict;
@@ -19,6 +20,7 @@ pub mod remote;
 pub mod repo;
 pub mod repo_registry;
 pub mod stage;
+pub mod stage_hunk;
 pub mod stash;
 pub mod status;
 pub mod submodule;
