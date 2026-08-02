@@ -4,6 +4,9 @@ import Sidebar from "./components/Sidebar/Sidebar";
 import CommitGraph from "./components/CommitGraph/CommitGraph";
 import DiffViewer from "./components/DiffViewer/DiffViewer";
 import StagingPanel from "./components/StagingPanel/StagingPanel";
+import { ConflictEditor } from "./components/ConflictEditor/ConflictEditor";
+import { RebaseDialog } from "./components/RebaseDialog/RebaseDialog";
+import { UndoToast } from "./components/UndoToast/UndoToast";
 import "./App.css";
 
 function WelcomeScreen() {
@@ -116,6 +119,9 @@ function StatusBar() {
 
 export default function App() {
   const repo = useRepoStore((s) => s.repo);
+  const operationState = useRepoStore((s) => s.operationState);
+  const activeConflictPath = useRepoStore((s) => s.activeConflictPath);
+  const interactiveRebaseModal = useRepoStore((s) => s.interactiveRebaseModal);
 
   // Live updates come from the Rust filesystem watcher. There is deliberately
   // no polling interval anywhere in this app.
@@ -128,18 +134,38 @@ export default function App() {
 
   if (!repo) return <WelcomeScreen />;
 
+  const hasConflict =
+    activeConflictPath ||
+    (operationState?.conflictedPaths && operationState.conflictedPaths.length > 0) ||
+    operationState?.kind != null;
+
   return (
     <div className="app-shell">
       <Header />
       <div className="app-body">
         <Sidebar />
         <div className="app-center">
-          <CommitGraph />
-          <DiffViewer />
+          {hasConflict ? (
+            <ConflictEditor path={activeConflictPath} />
+          ) : (
+            <>
+              <CommitGraph />
+              <DiffViewer />
+            </>
+          )}
         </div>
         <StagingPanel />
       </div>
       <StatusBar />
+
+      {interactiveRebaseModal?.open && (
+        <RebaseDialog
+          baseRef={interactiveRebaseModal.baseRef}
+          initialCommits={interactiveRebaseModal.commits}
+        />
+      )}
+
+      <UndoToast />
     </div>
   );
 }

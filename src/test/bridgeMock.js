@@ -59,6 +59,16 @@ export const BRIDGE_FUNCTIONS = [
   "applyStash",
   "popStash",
   "dropStash",
+  "getRepoOperationState",
+  "readConflictStages",
+  "resolveConflict",
+  "continueOperation",
+  "abortOperation",
+  "skipRebase",
+  "plainRebase",
+  "interactiveRebase",
+  "undoLastAction",
+  "getUndoHistory",
 ];
 
 export function makeBridgeMock() {
@@ -69,6 +79,9 @@ export function makeBridgeMock() {
   for (const name of BRIDGE_FUNCTIONS) {
     mock[name] = vi.fn(() => Promise.resolve());
   }
+  mock.getRepoOperationState = vi.fn(() =>
+    Promise.resolve({ kind: null, headName: null, onto: null, conflictedPaths: [] })
+  );
   // Subscribing returns an unlisten function, not a plain resolve.
   mock.onRepoChanged = vi.fn(() => Promise.resolve(() => {}));
   return mock;

@@ -6,14 +6,18 @@
 
 pub mod branch;
 pub mod commit;
+pub mod conflict;
 pub mod diff;
 pub mod exec;
 pub mod log;
+pub mod merge_state;
+pub mod rebase;
 pub mod remote;
 pub mod repo;
 pub mod stage;
 pub mod stash;
 pub mod status;
+pub mod undo;
 pub mod watcher;
 
 #[cfg(test)]

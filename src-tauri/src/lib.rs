@@ -67,6 +67,19 @@ pub fn run() {
             commands::stash::apply_stash,
             commands::stash::pop_stash,
             commands::stash::drop_stash,
+            // conflict & operation state
+            commands::conflict::get_repo_operation_state,
+            commands::conflict::read_conflict_stages,
+            commands::conflict::resolve_conflict,
+            commands::conflict::continue_operation,
+            commands::conflict::abort_operation,
+            commands::conflict::skip_rebase,
+            // rebase
+            commands::rebase::plain_rebase,
+            commands::rebase::interactive_rebase,
+            // undo
+            commands::undo::undo_last_action,
+            commands::undo::get_undo_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running PenguinGit");

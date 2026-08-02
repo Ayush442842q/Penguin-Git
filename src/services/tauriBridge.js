@@ -164,3 +164,38 @@ export const applyStash = (repoPath, index, hash) =>
 export const popStash = (repoPath, index, hash) => invoke("pop_stash", { repoPath, index, hash });
 
 export const dropStash = (repoPath, index, hash) => invoke("drop_stash", { repoPath, index, hash });
+
+// -- conflict & operation state ------------------------------------------------
+
+export const getRepoOperationState = (repoId) =>
+  invoke("get_repo_operation_state", { repoId: { 0: repoId } });
+
+export const readConflictStages = (repoId, path) =>
+  invoke("read_conflict_stages", { repoId: { 0: repoId }, path });
+
+export const resolveConflict = (repoId, path, content) =>
+  invoke("resolve_conflict", { repoId: { 0: repoId }, path, content });
+
+export const continueOperation = (repoId) =>
+  invoke("continue_operation", { repoId: { 0: repoId } });
+
+export const abortOperation = (repoId) =>
+  invoke("abort_operation", { repoId: { 0: repoId } });
+
+export const skipRebase = (repoId) =>
+  invoke("skip_rebase", { repoId: { 0: repoId } });
+
+// -- rebase -------------------------------------------------------------------
+
+export const plainRebase = (repoId, target) =>
+  invoke("plain_rebase", { repoId: { 0: repoId }, target });
+
+export const interactiveRebase = (repoId, baseRef, todoItems) =>
+  invoke("interactive_rebase", { repoId: { 0: repoId }, baseRef, todoItems });
+
+// -- undo ---------------------------------------------------------------------
+
+export const undoLastAction = (repoId) =>
+  invoke("undo_last_action", { repoId: { 0: repoId } });
+
+export const getUndoHistory = () => invoke("get_undo_history");
