@@ -15,15 +15,18 @@ pub fn git_stage_hunk(repo_path: &Path, patch: &str) -> Result<(), GitError> {
     }
 
     let mut temp_file = NamedTempFile::new().map_err(GitError::Spawn)?;
-    temp_file.write_all(patch.as_bytes()).map_err(GitError::Spawn)?;
+    temp_file
+        .write_all(patch.as_bytes())
+        .map_err(GitError::Spawn)?;
     temp_file.flush().map_err(GitError::Spawn)?;
 
-    let temp_path = temp_file.path().to_str().ok_or_else(|| {
-        GitError::CommandFailed {
+    let temp_path = temp_file
+        .path()
+        .to_str()
+        .ok_or_else(|| GitError::CommandFailed {
             exit_code: None,
             stderr: "Invalid temp file path".to_string(),
-        }
-    })?;
+        })?;
 
     // Apply the patch to the index
     run_git(repo_path, &["apply", "--cached", temp_path])?;
@@ -40,7 +43,8 @@ mod tests {
     fn git_stage_hunk_stages_only_the_selected_hunk() {
         let repo = FixtureRepo::new();
         let file_name = "test.txt";
-        let initial_content = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\n";
+        let initial_content =
+            "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\n";
         repo.commit(file_name, initial_content, "Initial commit");
 
         // Modify lines at the top and bottom to create two distinct hunks

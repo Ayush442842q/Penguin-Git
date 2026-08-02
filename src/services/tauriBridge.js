@@ -234,8 +234,7 @@ export const testAiConnection = (provider, model, apiKey) =>
 export const aiComposeCommitMessage = (repoPath) =>
   invoke("ai_compose_commit_message", { repoPath });
 
-export const aiExplainCommit = (repoPath, hash) =>
-  invoke("ai_explain_commit", { repoPath, hash });
+export const aiExplainCommit = (repoPath, hash) => invoke("ai_explain_commit", { repoPath, hash });
 
 export const aiExplainBranch = (repoPath, branch, target) =>
   invoke("ai_explain_branch", { repoPath, branch, target });
@@ -247,4 +246,3 @@ export const getBranchDiff = (repoPath, branch, target) =>
   invoke("get_branch_diff", { repoPath, branch, target });
 
 export const gitStageHunk = (repoPath, patch) => invoke("git_stage_hunk", { repoPath, patch });
-

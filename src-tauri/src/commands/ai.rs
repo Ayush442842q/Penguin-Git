@@ -1,8 +1,6 @@
 use std::path::Path;
 
-use crate::core::ai::{
-    self, AiConfigResponse, AiExplainBranchResult, PrDescriptionResult,
-};
+use crate::core::ai::{self, AiConfigResponse, AiExplainBranchResult, PrDescriptionResult};
 use crate::core::stage_hunk;
 
 #[tauri::command]

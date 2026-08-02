@@ -28,14 +28,10 @@ export default function AiPanel() {
   const [statusMessage, setStatusMessage] = useState(null);
 
   useEffect(() => {
-    loadConfig();
-  }, []);
-
-  const loadConfig = async () => {
-    setLoading(true);
-    try {
-      const cfg = await getAiConfig();
-      if (cfg) {
+    let active = true;
+    getAiConfig()
+      .then((cfg) => {
+        if (!active || !cfg) return;
         setProvider(cfg.provider || "anthropic");
         setHasKey(!!cfg.has_key);
 
@@ -48,13 +44,18 @@ export default function AiPanel() {
           setIsCustomModel(true);
           setCustomModel(cfg.model || "");
         }
-      }
-    } catch (err) {
-      console.error("Failed to load AI config:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      })
+      .catch((err) => {
+        console.error("Failed to load AI config:", err);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleProviderChange = (newProvider) => {
     setProvider(newProvider);

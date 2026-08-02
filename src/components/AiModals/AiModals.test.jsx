@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import ExplainCommitModal from "./ExplainCommitModal";
 import ExplainBranchModal from "./ExplainBranchModal";
@@ -64,9 +64,9 @@ describe("AI Modals", () => {
       });
 
       expect(tauriBridge.aiExplainBranch).toHaveBeenCalledWith("/repo", "feature/ai", "main");
-      expect(localStorage.getItem("penguingit_explain_branch_sha_branch_tip_111_sha_target_tip_222")).toBe(
-        "Branch refactored storage."
-      );
+      expect(
+        localStorage.getItem("penguingit_explain_branch_sha_branch_tip_111_sha_target_tip_222")
+      ).toBe("Branch refactored storage.");
     });
   });
 
@@ -84,7 +84,11 @@ describe("AI Modals", () => {
         expect(screen.getByDisplayValue(/## Summary/)).toBeInTheDocument();
       });
 
-      expect(tauriBridge.aiGeneratePrDescription).toHaveBeenCalledWith("/repo", "feature/ai", "main");
+      expect(tauriBridge.aiGeneratePrDescription).toHaveBeenCalledWith(
+        "/repo",
+        "feature/ai",
+        "main"
+      );
     });
   });
 });

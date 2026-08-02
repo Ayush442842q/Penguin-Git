@@ -211,9 +211,7 @@ export default function BranchPanel() {
         <ExplainBranchModal branch={explainBranch} onClose={() => setExplainBranch(null)} />
       )}
 
-      {prBranch && (
-        <PrDescriptionModal branch={prBranch} onClose={() => setPrBranch(null)} />
-      )}
+      {prBranch && <PrDescriptionModal branch={prBranch} onClose={() => setPrBranch(null)} />}
     </div>
   );
 }

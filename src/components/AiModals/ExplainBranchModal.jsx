@@ -66,7 +66,9 @@ export default function ExplainBranchModal({ branch, target = "main", onClose })
       <div className="ai-modal" onClick={(e) => e.stopPropagation()}>
         <div className="ai-modal-header">
           <h3>
-            <span>🌿 Explain Branch ({branch} vs {target})</span>
+            <span>
+              🌿 Explain Branch ({branch} vs {target})
+            </span>
             {isCached && <span className="cache-badge">⚡ Cache Hit (Tip SHA)</span>}
           </h3>
           <button className="settings-close-btn" onClick={onClose}>

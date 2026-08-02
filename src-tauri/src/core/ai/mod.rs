@@ -5,10 +5,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-pub use config::{
-    get_ai_config, save_ai_config, test_ai_connection, AiConfig, AiConfigResponse,
-};
-pub use provider::{AiError, AiProvider, AnthropicProvider, OpenAiProvider};
+pub use config::{get_ai_config, save_ai_config, test_ai_connection, AiConfig, AiConfigResponse};
+pub use provider::{AiError, AiProvider, AnthropicProvider, OpenAiProvider, ProviderClient};
 
 use super::diff::{diff_commit, diff_repo};
 use super::exec::run_git;
@@ -35,17 +33,26 @@ fn truncate_diff_if_needed(diff: &str) -> String {
         diff.to_string()
     } else {
         let truncated = &diff[..MAX_DIFF_BYTES];
-        format!("{truncated}\n\n[Diff truncated due to size limits. Total length was {} bytes]", diff.len())
+        format!(
+            "{truncated}\n\n[Diff truncated due to size limits. Total length was {} bytes]",
+            diff.len()
+        )
     }
 }
 
-pub async fn get_active_provider() -> Result<Box<dyn AiProvider>, AiError> {
+pub async fn get_active_provider() -> Result<ProviderClient, AiError> {
     let config = config::load_saved_config();
     let key = config::get_api_key()?;
 
     match config.provider.as_str() {
-        "anthropic" => Ok(Box::new(AnthropicProvider::new(config.model, key))),
-        "openai" => Ok(Box::new(OpenAiProvider::new(config.model, key))),
+        "anthropic" => Ok(ProviderClient::Anthropic(AnthropicProvider::new(
+            config.model,
+            key,
+        ))),
+        "openai" => Ok(ProviderClient::OpenAi(OpenAiProvider::new(
+            config.model,
+            key,
+        ))),
         other => Err(AiError::InvalidConfig(format!(
             "Unsupported provider '{other}'"
         ))),

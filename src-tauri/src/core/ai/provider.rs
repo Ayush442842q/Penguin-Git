@@ -23,6 +23,24 @@ pub trait AiProvider: Send + Sync {
     ) -> impl std::future::Future<Output = Result<String, AiError>> + Send;
 }
 
+pub enum ProviderClient {
+    Anthropic(AnthropicProvider),
+    OpenAi(OpenAiProvider),
+}
+
+impl ProviderClient {
+    pub async fn complete(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+    ) -> Result<String, AiError> {
+        match self {
+            Self::Anthropic(p) => p.complete(system_prompt, user_prompt).await,
+            Self::OpenAi(p) => p.complete(system_prompt, user_prompt).await,
+        }
+    }
+}
+
 pub struct AnthropicProvider {
     pub model: String,
     pub api_key: String,
@@ -37,42 +55,12 @@ impl AnthropicProvider {
             client: reqwest::Client::new(),
         }
     }
-}
 
-#[derive(Serialize)]
-struct AnthropicMessage {
-    role: String,
-    content: String,
-}
-
-#[derive(Serialize)]
-struct AnthropicRequest<'a> {
-    model: &'a str,
-    system: &'a str,
-    messages: Vec<AnthropicMessage>,
-    max_tokens: u32,
-}
-
-#[derive(Deserialize)]
-struct AnthropicContentBlock {
-    #[serde(rename = "type")]
-    kind: String,
-    text: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct AnthropicResponse {
-    content: Option<Vec<AnthropicContentBlock>>,
-    error: Option<AnthropicErrorDetail>,
-}
-
-#[derive(Deserialize)]
-struct AnthropicErrorDetail {
-    message: String,
-}
-
-impl AiProvider for AnthropicProvider {
-    async fn complete(&self, system_prompt: &str, user_prompt: &str) -> Result<String, AiError> {
+    pub async fn complete(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+    ) -> Result<String, AiError> {
         let payload = AnthropicRequest {
             model: &self.model,
             system: system_prompt,
@@ -129,6 +117,48 @@ impl AiProvider for AnthropicProvider {
     }
 }
 
+impl AiProvider for AnthropicProvider {
+    fn complete(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+    ) -> impl std::future::Future<Output = Result<String, AiError>> + Send {
+        self.complete(system_prompt, user_prompt)
+    }
+}
+
+#[derive(Serialize)]
+struct AnthropicMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(Serialize)]
+struct AnthropicRequest<'a> {
+    model: &'a str,
+    system: &'a str,
+    messages: Vec<AnthropicMessage>,
+    max_tokens: u32,
+}
+
+#[derive(Deserialize)]
+struct AnthropicContentBlock {
+    #[serde(rename = "type")]
+    kind: String,
+    text: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct AnthropicResponse {
+    content: Option<Vec<AnthropicContentBlock>>,
+    error: Option<AnthropicErrorDetail>,
+}
+
+#[derive(Deserialize)]
+struct AnthropicErrorDetail {
+    message: String,
+}
+
 pub struct OpenAiProvider {
     pub model: String,
     pub api_key: String,
@@ -143,44 +173,12 @@ impl OpenAiProvider {
             client: reqwest::Client::new(),
         }
     }
-}
 
-#[derive(Serialize)]
-struct OpenAiMessage<'a> {
-    role: &'a str,
-    content: &'a str,
-}
-
-#[derive(Serialize)]
-struct OpenAiRequest<'a> {
-    model: &'a str,
-    messages: Vec<OpenAiMessage<'a>>,
-    max_tokens: u32,
-}
-
-#[derive(Deserialize)]
-struct OpenAiChoiceMessage {
-    content: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct OpenAiChoice {
-    message: Option<OpenAiChoiceMessage>,
-}
-
-#[derive(Deserialize)]
-struct OpenAiErrorDetail {
-    message: String,
-}
-
-#[derive(Deserialize)]
-struct OpenAiResponse {
-    choices: Option<Vec<OpenAiChoice>>,
-    error: Option<OpenAiErrorDetail>,
-}
-
-impl AiProvider for OpenAiProvider {
-    async fn complete(&self, system_prompt: &str, user_prompt: &str) -> Result<String, AiError> {
+    pub async fn complete(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+    ) -> Result<String, AiError> {
         let payload = OpenAiRequest {
             model: &self.model,
             messages: vec![
@@ -237,4 +235,48 @@ impl AiProvider for OpenAiProvider {
             "No completion text returned in OpenAI response".into(),
         ))
     }
+}
+
+impl AiProvider for OpenAiProvider {
+    fn complete(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+    ) -> impl std::future::Future<Output = Result<String, AiError>> + Send {
+        self.complete(system_prompt, user_prompt)
+    }
+}
+
+#[derive(Serialize)]
+struct OpenAiMessage<'a> {
+    role: &'a str,
+    content: &'a str,
+}
+
+#[derive(Serialize)]
+struct OpenAiRequest<'a> {
+    model: &'a str,
+    messages: Vec<OpenAiMessage<'a>>,
+    max_tokens: u32,
+}
+
+#[derive(Deserialize)]
+struct OpenAiChoiceMessage {
+    content: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct OpenAiChoice {
+    message: Option<OpenAiChoiceMessage>,
+}
+
+#[derive(Deserialize)]
+struct OpenAiErrorDetail {
+    message: String,
+}
+
+#[derive(Deserialize)]
+struct OpenAiResponse {
+    choices: Option<Vec<OpenAiChoice>>,
+    error: Option<OpenAiErrorDetail>,
 }

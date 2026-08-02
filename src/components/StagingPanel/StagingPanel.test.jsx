@@ -172,7 +172,9 @@ describe("StagingPanel", () => {
 
   describe("AI Compose", () => {
     it("composes commit message from staged diff", async () => {
-      bridge.aiComposeCommitMessage.mockResolvedValue("feat(core): add feature\n\nDetailed explanation.");
+      bridge.aiComposeCommitMessage.mockResolvedValue(
+        "feat(core): add feature\n\nDetailed explanation."
+      );
       render(<StagingPanel />);
 
       const composeBtn = screen.getByText("✨ Compose with AI");
@@ -180,8 +182,12 @@ describe("StagingPanel", () => {
 
       await waitFor(() => {
         expect(bridge.aiComposeCommitMessage).toHaveBeenCalledWith("/repo");
-        expect(screen.getByPlaceholderText(/commit message/i).value).toBe("feat(core): add feature");
-        expect(screen.getByPlaceholderText(/extended description/i).value).toBe("Detailed explanation.");
+        expect(screen.getByPlaceholderText(/commit message/i).value).toBe(
+          "feat(core): add feature"
+        );
+        expect(screen.getByPlaceholderText(/extended description/i).value).toBe(
+          "Detailed explanation."
+        );
       });
     });
   });

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
 
-use super::provider::{AiError, AiProvider, AnthropicProvider, OpenAiProvider};
+use super::provider::{AiError, AnthropicProvider, OpenAiProvider, ProviderClient};
 
 const KEYRING_SERVICE: &str = "penguingit";
 const KEYRING_USER: &str = "ai_api_key";
@@ -32,11 +32,13 @@ pub struct AiConfigResponse {
 }
 
 fn config_file_path() -> PathBuf {
-    let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    path.push("penguingit");
+    let base = std::env::var("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .or_else(|_| std::env::var("HOME").map(|h| PathBuf::from(h).join(".config")))
+        .unwrap_or_else(|_| PathBuf::from("."));
+    let path = base.join("penguingit");
     let _ = fs::create_dir_all(&path);
-    path.push("ai_config.json");
-    path
+    path.join("ai_config.json")
 }
 
 fn keyring_entry() -> Result<Entry, AiError> {
@@ -131,15 +133,9 @@ pub async fn test_ai_connection(
     let system_prompt = "You are an API connection tester. Reply with 'OK' and nothing else.";
     let user_prompt = "Test connection";
 
-    let response_text = match target_provider.as_str() {
-        "anthropic" => {
-            let client = AnthropicProvider::new(target_model, key);
-            client.complete(system_prompt, user_prompt).await?
-        }
-        "openai" => {
-            let client = OpenAiProvider::new(target_model, key);
-            client.complete(system_prompt, user_prompt).await?
-        }
+    let client = match target_provider.as_str() {
+        "anthropic" => ProviderClient::Anthropic(AnthropicProvider::new(target_model, key)),
+        "openai" => ProviderClient::OpenAi(OpenAiProvider::new(target_model, key)),
         other => {
             return Err(AiError::InvalidConfig(format!(
                 "Unsupported AI provider '{other}'"
@@ -147,9 +143,13 @@ pub async fn test_ai_connection(
         }
     };
 
+    let response_text = client.complete(system_prompt, user_prompt).await?;
+
     if !response_text.trim().is_empty() {
         Ok(true)
     } else {
-        Err(AiError::ProviderError("Received empty test response".into()))
+        Err(AiError::ProviderError(
+            "Received empty test response".into(),
+        ))
     }
 }

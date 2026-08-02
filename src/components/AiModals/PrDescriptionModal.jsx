@@ -56,7 +56,9 @@ export default function PrDescriptionModal({ branch, target = "main", onClose })
     <div className="ai-modal-overlay" onClick={onClose}>
       <div className="ai-modal" onClick={(e) => e.stopPropagation()}>
         <div className="ai-modal-header">
-          <h3>📝 Generate PR Description ({branch} → {target})</h3>
+          <h3>
+            📝 Generate PR Description ({branch} → {target})
+          </h3>
           <button className="settings-close-btn" onClick={onClose}>
             ✕
           </button>
