@@ -33,7 +33,9 @@ pub async fn register(
 ) -> Result<(StatusCode, Json<UserPublic>), ApiError> {
     let username = payload.username.trim();
     if username.is_empty() || payload.password.trim().is_empty() {
-        return Err(ApiError::BadRequest("Username and password required".into()));
+        return Err(ApiError::BadRequest(
+            "Username and password required".into(),
+        ));
     }
 
     let password_hash = hash_password(&payload.password)?;
@@ -78,7 +80,9 @@ pub async fn login(
     .ok_or_else(|| ApiError::Unauthorized("Invalid username or password".into()))?;
 
     if !verify_password(&payload.password, &user.password_hash) {
-        return Err(ApiError::Unauthorized("Invalid username or password".into()));
+        return Err(ApiError::Unauthorized(
+            "Invalid username or password".into(),
+        ));
     }
 
     let token_str = generate_opaque_token();

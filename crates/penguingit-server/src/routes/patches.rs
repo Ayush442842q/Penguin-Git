@@ -98,10 +98,11 @@ pub async fn add_comment(
     }
 
     // Verify patch exists
-    let exists = sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM patches WHERE id = $1)")
-        .bind(id)
-        .fetch_one(&state.db)
-        .await?;
+    let exists =
+        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM patches WHERE id = $1)")
+            .bind(id)
+            .fetch_one(&state.db)
+            .await?;
 
     if !exists {
         return Err(ApiError::NotFound("Patch not found".into()));

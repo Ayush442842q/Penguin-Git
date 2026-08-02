@@ -42,19 +42,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = Router::new()
         .route("/health", get(|| async { "OK" }))
-        .route("/api/auth/register", axum::routing::post(routes::auth::register))
+        .route(
+            "/api/auth/register",
+            axum::routing::post(routes::auth::register),
+        )
         .route("/api/auth/login", axum::routing::post(routes::auth::login))
-        .route("/api/auth/logout", axum::routing::post(routes::auth::logout))
+        .route(
+            "/api/auth/logout",
+            axum::routing::post(routes::auth::logout),
+        )
         .route(
             "/api/patches",
-            axum::routing::post(routes::patches::create_patch)
-                .get(routes::patches::list_patches),
+            axum::routing::post(routes::patches::create_patch).get(routes::patches::list_patches),
         )
-        .route("/api/patches/:id", axum::routing::get(routes::patches::get_patch))
+        .route(
+            "/api/patches/:id",
+            axum::routing::get(routes::patches::get_patch),
+        )
         .route(
             "/api/patches/:id/comments",
-            axum::routing::post(routes::patches::add_comment)
-                .get(routes::patches::list_comments),
+            axum::routing::post(routes::patches::add_comment).get(routes::patches::list_comments),
         )
         .route(
             "/api/workspaces",

@@ -327,4 +327,3 @@ export const cloudAddComment = (patchId, body) => invoke("cloud_add_comment", { 
 export const cloudListComments = (patchId) => invoke("cloud_list_comments", { patchId });
 export const cloudCreateWorkspace = (name) => invoke("cloud_create_workspace", { name });
 export const cloudListWorkspaces = () => invoke("cloud_list_workspaces");
-

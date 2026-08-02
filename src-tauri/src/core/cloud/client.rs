@@ -54,12 +54,16 @@ pub struct CloudWorkspace {
 
 pub fn save_cloud_config(server_url: &str, token: Option<&str>) -> Result<(), String> {
     let url_entry = Entry::new(KEYRING_SERVICE, KEYRING_URL_USER).map_err(|e| e.to_string())?;
-    url_entry.set_password(server_url.trim()).map_err(|e| e.to_string())?;
+    url_entry
+        .set_password(server_url.trim())
+        .map_err(|e| e.to_string())?;
 
     let token_entry = Entry::new(KEYRING_SERVICE, KEYRING_TOKEN_USER).map_err(|e| e.to_string())?;
     match token {
         Some(t) if !t.trim().is_empty() => {
-            token_entry.set_password(t.trim()).map_err(|e| e.to_string())?;
+            token_entry
+                .set_password(t.trim())
+                .map_err(|e| e.to_string())?;
         }
         _ => {
             let _ = token_entry.delete_credential();
@@ -149,10 +153,7 @@ impl CloudClient {
         repo_name: Option<&str>,
         base_commit: Option<&str>,
     ) -> Result<CloudPatch, String> {
-        let token = self
-            .token
-            .as_ref()
-            .ok_or("Not logged in to cloud server")?;
+        let token = self.token.as_ref().ok_or("Not logged in to cloud server")?;
         let url = format!("{}/api/patches", self.server_url);
 
         let res = self
@@ -172,7 +173,10 @@ impl CloudClient {
 
         if !res.status().is_success() {
             let err_body: serde_json::Value = res.json().await.unwrap_or_default();
-            return Err(err_body["error"].as_str().unwrap_or("Failed to publish patch").to_string());
+            return Err(err_body["error"]
+                .as_str()
+                .unwrap_or("Failed to publish patch")
+                .to_string());
         }
 
         res.json::<CloudPatch>().await.map_err(|e| e.to_string())
@@ -194,10 +198,16 @@ impl CloudClient {
             return Err("Failed to fetch cloud patches".into());
         }
 
-        res.json::<Vec<CloudPatch>>().await.map_err(|e| e.to_string())
+        res.json::<Vec<CloudPatch>>()
+            .await
+            .map_err(|e| e.to_string())
     }
 
-    pub async fn add_comment(&self, patch_id: &str, body: &str) -> Result<CloudPatchComment, String> {
+    pub async fn add_comment(
+        &self,
+        patch_id: &str,
+        body: &str,
+    ) -> Result<CloudPatchComment, String> {
         let token = self.token.as_ref().ok_or("Not logged in to cloud server")?;
         let url = format!("{}/api/patches/{patch_id}/comments", self.server_url);
 
@@ -214,7 +224,9 @@ impl CloudClient {
             return Err("Failed to add comment".into());
         }
 
-        res.json::<CloudPatchComment>().await.map_err(|e| e.to_string())
+        res.json::<CloudPatchComment>()
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn list_comments(&self, patch_id: &str) -> Result<Vec<CloudPatchComment>, String> {
@@ -233,7 +245,9 @@ impl CloudClient {
             return Err("Failed to fetch comments".into());
         }
 
-        res.json::<Vec<CloudPatchComment>>().await.map_err(|e| e.to_string())
+        res.json::<Vec<CloudPatchComment>>()
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn create_workspace(&self, name: &str) -> Result<CloudWorkspace, String> {
@@ -253,7 +267,9 @@ impl CloudClient {
             return Err("Failed to create cloud workspace".into());
         }
 
-        res.json::<CloudWorkspace>().await.map_err(|e| e.to_string())
+        res.json::<CloudWorkspace>()
+            .await
+            .map_err(|e| e.to_string())
     }
 
     pub async fn list_workspaces(&self) -> Result<Vec<CloudWorkspace>, String> {
@@ -272,7 +288,9 @@ impl CloudClient {
             return Err("Failed to fetch cloud workspaces".into());
         }
 
-        res.json::<Vec<CloudWorkspace>>().await.map_err(|e| e.to_string())
+        res.json::<Vec<CloudWorkspace>>()
+            .await
+            .map_err(|e| e.to_string())
     }
 }
 

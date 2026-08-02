@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 use crate::{error::ApiError, AppState};
 
+#[allow(dead_code)]
 pub struct AuthUser {
     pub id: Uuid,
     pub username: String,
@@ -36,7 +37,9 @@ where
                 .ok_or_else(|| ApiError::Unauthorized("Missing Authorization header".into()))?;
 
             if !auth_header.starts_with("Bearer ") {
-                return Err(ApiError::Unauthorized("Invalid Authorization header format".into()));
+                return Err(ApiError::Unauthorized(
+                    "Invalid Authorization header format".into(),
+                ));
             }
 
             let t = auth_header.trim_start_matches("Bearer ").trim();

@@ -34,7 +34,9 @@ export default function CloudPatches({ activeRepoPath, isOpen, onClose, onPrevie
         }
       } catch (err) {
         if (active) {
-          setError(typeof err === "string" ? err : "Failed to load cloud patches. Are you logged in?");
+          setError(
+            typeof err === "string" ? err : "Failed to load cloud patches. Are you logged in?"
+          );
         }
       } finally {
         if (active) setLoading(false);
@@ -183,7 +185,9 @@ export default function CloudPatches({ activeRepoPath, isOpen, onClose, onPrevie
                     {comments.map((c) => (
                       <div key={c.id} className="cloud-comment-item">
                         <div className="cloud-comment-header">
-                          <span className="cloud-comment-author">User {c.authorId.slice(0, 8)}</span>
+                          <span className="cloud-comment-author">
+                            User {c.authorId.slice(0, 8)}
+                          </span>
                           <span className="cloud-comment-time">
                             {new Date(c.createdAt).toLocaleTimeString()}
                           </span>

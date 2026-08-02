@@ -79,7 +79,8 @@ export default function CloudPanel() {
       </div>
 
       <p className="cloud-panel-description">
-        Connect to a self-hosted PenguinGit Cloud server to share patches, comment on diffs, and collaborate across teams.
+        Connect to a self-hosted PenguinGit Cloud server to share patches, comment on diffs, and
+        collaborate across teams.
       </p>
 
       {error && <div className="cloud-alert cloud-alert-error">{error}</div>}

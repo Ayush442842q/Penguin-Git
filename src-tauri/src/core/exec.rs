@@ -95,7 +95,11 @@ pub fn run_git_raw_with_env(
 ///
 /// Needed for commands like `git apply -` and `git am` that read patch data
 /// from stdin rather than a file path argument.
-pub fn run_git_with_stdin(cwd: &Path, args: &[&str], stdin_data: &[u8]) -> Result<String, GitError> {
+pub fn run_git_with_stdin(
+    cwd: &Path,
+    args: &[&str],
+    stdin_data: &[u8],
+) -> Result<String, GitError> {
     let output = run_git_raw_with_stdin(cwd, args, stdin_data)?;
 
     if output.success() {
@@ -311,8 +315,8 @@ mod tests {
         repo.git(&["add", "a.txt"]);
 
         // Generate a patch from the staged change.
-        let patch = run_git(repo.path(), &["diff", "--cached", "--no-color"])
-            .expect("diff should succeed");
+        let patch =
+            run_git(repo.path(), &["diff", "--cached", "--no-color"]).expect("diff should succeed");
 
         // Reset the index and working tree so the patch can be re-applied.
         repo.git(&["reset", "--hard", "HEAD"]);

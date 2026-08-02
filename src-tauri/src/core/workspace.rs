@@ -44,13 +44,17 @@ impl RepoRegistry {
 
     pub fn delete_workspace(&self, id: &str) -> Result<(), rusqlite::Error> {
         let conn = self.conn.lock().expect("registry db mutex poisoned");
-        conn.execute("DELETE FROM workspaces WHERE id = ?1", rusqlite::params![id])?;
+        conn.execute(
+            "DELETE FROM workspaces WHERE id = ?1",
+            rusqlite::params![id],
+        )?;
         Ok(())
     }
 
     pub fn list_workspaces(&self) -> Result<Vec<LocalWorkspace>, rusqlite::Error> {
         let conn = self.conn.lock().expect("registry db mutex poisoned");
-        let mut stmt = conn.prepare("SELECT id, name, created_at FROM workspaces ORDER BY name ASC")?;
+        let mut stmt =
+            conn.prepare("SELECT id, name, created_at FROM workspaces ORDER BY name ASC")?;
         let rows = stmt.query_map([], |row| {
             Ok(LocalWorkspace {
                 id: row.get(0)?,
@@ -172,7 +176,9 @@ mod tests {
         assert_eq!(renamed.name, "Core Services");
 
         // 5. Remove repo from workspace
-        registry.remove_repo_from_workspace(&ws1.id, &repo.id).unwrap();
+        registry
+            .remove_repo_from_workspace(&ws1.id, &repo.id)
+            .unwrap();
         assert_eq!(registry.list_workspace_repos(&ws1.id).unwrap().len(), 0);
 
         // 6. Delete workspace

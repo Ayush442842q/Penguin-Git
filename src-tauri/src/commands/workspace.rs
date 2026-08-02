@@ -9,7 +9,10 @@ pub fn create_workspace(
     name: String,
     state: State<'_, AppState>,
 ) -> Result<LocalWorkspace, String> {
-    state.registry.create_workspace(&name).map_err(|e| e.to_string())
+    state
+        .registry
+        .create_workspace(&name)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -26,7 +29,10 @@ pub fn rename_workspace(
 
 #[tauri::command]
 pub fn delete_workspace(id: String, state: State<'_, AppState>) -> Result<(), String> {
-    state.registry.delete_workspace(&id).map_err(|e| e.to_string())
+    state
+        .registry
+        .delete_workspace(&id)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

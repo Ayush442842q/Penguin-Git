@@ -11,7 +11,7 @@ import {
 } from "../../services/tauriBridge";
 import "./Workspaces.css";
 
-export default function Workspaces({ onOpenRepo, isCloudConfigured = false, onShareToCloud }) {
+export default function Workspaces({ onOpenRepo, _isCloudConfigured = false, onShareToCloud }) {
   const recentRepos = useRepoStore((s) => s.recentRepos);
   const [workspaces, setWorkspaces] = useState([]);
   const [selectedWsId, setSelectedWsId] = useState(null);

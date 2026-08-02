@@ -71,7 +71,10 @@ export default function Sidebar() {
           <button className="ghost sidebar-section-toggle" onClick={() => setShowPatchModal(true)}>
             <span className="section-label">📄 Share via File (Patch)</span>
           </button>
-          <button className="ghost sidebar-section-toggle" onClick={() => setShowCloudPatches(true)}>
+          <button
+            className="ghost sidebar-section-toggle"
+            onClick={() => setShowCloudPatches(true)}
+          >
             <span className="section-label">☁️ Cloud Patches</span>
           </button>
         </div>

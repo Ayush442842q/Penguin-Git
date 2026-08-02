@@ -94,8 +94,7 @@ pub fn preview_patch(repo_path: &Path, patch_content: &str) -> Result<PatchPrevi
 pub fn apply_patch(repo_path: &Path, patch_content: &str) -> Result<String, GitError> {
     // Try `git am` first — it understands email-formatted patches produced by
     // `format-patch` and creates commits with the original author/message.
-    let am_result =
-        run_git_raw_with_stdin(repo_path, &["am", "--3way"], patch_content.as_bytes())?;
+    let am_result = run_git_raw_with_stdin(repo_path, &["am", "--3way"], patch_content.as_bytes())?;
 
     if am_result.success() {
         return Ok("Patch applied and committed via git am.".to_string());
@@ -114,7 +113,13 @@ pub fn apply_patch(repo_path: &Path, patch_content: &str) -> Result<String, GitE
 fn sanitize_filename(input: &str) -> String {
     input
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect::<String>()
         .trim_matches('_')
         .to_string()
@@ -131,8 +136,7 @@ mod tests {
         repo.commit("a.txt", "v1\n", "First commit");
         repo.commit("a.txt", "v2\n", "Second commit");
 
-        let patch = export_patch(repo.path(), Some("HEAD~1..HEAD"))
-            .expect("export should succeed");
+        let patch = export_patch(repo.path(), Some("HEAD~1..HEAD")).expect("export should succeed");
 
         assert!(patch.content.contains("Second commit"));
         assert!(patch.content.contains("+v2"));
@@ -162,8 +166,7 @@ mod tests {
         // Reset to before the change so the patch can apply.
         repo.git(&["reset", "--hard", "HEAD~1"]);
 
-        let preview = preview_patch(repo.path(), &patch.content)
-            .expect("preview should succeed");
+        let preview = preview_patch(repo.path(), &patch.content).expect("preview should succeed");
 
         assert!(preview.applies_cleanly);
         assert!(preview.check_error.is_none());
@@ -197,8 +200,7 @@ mod tests {
         // Reset to before the change.
         repo.git(&["reset", "--hard", "HEAD~1"]);
 
-        let result = apply_patch(repo.path(), &patch.content)
-            .expect("apply should succeed");
+        let result = apply_patch(repo.path(), &patch.content).expect("apply should succeed");
 
         assert!(result.contains("git am"));
 
@@ -218,8 +220,8 @@ mod tests {
         let patch_content = run_git(repo.path(), &["diff", "--no-color"]).unwrap();
         repo.git(&["checkout", "--", "a.txt"]);
 
-        let result = apply_patch(repo.path(), &patch_content)
-            .expect("apply should succeed via fallback");
+        let result =
+            apply_patch(repo.path(), &patch_content).expect("apply should succeed via fallback");
 
         assert!(result.contains("git apply"));
 
