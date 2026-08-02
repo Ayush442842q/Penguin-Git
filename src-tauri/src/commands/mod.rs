@@ -15,6 +15,7 @@ pub mod mcp;
 pub mod rebase;
 
 pub mod github;
+pub mod patch;
 pub mod registry;
 pub mod remote;
 pub mod repo;

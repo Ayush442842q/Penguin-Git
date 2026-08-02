@@ -116,6 +116,10 @@ pub fn run() {
             commands::github::github_get_pr,
             commands::github::github_create_pr,
             commands::github::start_work_on_issue,
+            // patch
+            commands::patch::export_patch,
+            commands::patch::preview_patch,
+            commands::patch::apply_patch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running PenguinGit");
