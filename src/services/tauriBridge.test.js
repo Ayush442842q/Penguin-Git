@@ -322,4 +322,66 @@ describe("tauriBridge", () => {
       });
     });
   });
+
+  describe("github commands", () => {
+    it("invokes save_github_token", () => {
+      git.saveGithubToken("ghp_123");
+      expect(invoke).toHaveBeenCalledWith("save_github_token", { token: "ghp_123" });
+    });
+
+    it("invokes get_github_token", () => {
+      git.getGithubToken();
+      expect(invoke).toHaveBeenCalledWith("get_github_token");
+    });
+
+    it("invokes delete_github_token", () => {
+      git.deleteGithubToken();
+      expect(invoke).toHaveBeenCalledWith("delete_github_token");
+    });
+
+    it("invokes test_github_token", () => {
+      git.testGithubConnection("ghp_123");
+      expect(invoke).toHaveBeenCalledWith("test_github_token", { token: "ghp_123" });
+    });
+
+    it("invokes get_repo_origin", () => {
+      git.getRepoOrigin("/r");
+      expect(invoke).toHaveBeenCalledWith("get_repo_origin", { repoPath: "/r" });
+    });
+
+    it("invokes github_search_prs", () => {
+      git.githubSearchPrs("/r");
+      expect(invoke).toHaveBeenCalledWith("github_search_prs", { repoPath: "/r" });
+    });
+
+    it("invokes github_get_launchpad_items", () => {
+      git.githubGetLaunchpadItems("/r");
+      expect(invoke).toHaveBeenCalledWith("github_get_launchpad_items", { repoPath: "/r" });
+    });
+
+    it("invokes github_get_pr", () => {
+      git.githubGetPr("/r", 42);
+      expect(invoke).toHaveBeenCalledWith("github_get_pr", { repoPath: "/r", number: 42 });
+    });
+
+    it("invokes github_create_pr", () => {
+      git.githubCreatePr("/r", "Title", "Body", "feat", "main");
+      expect(invoke).toHaveBeenCalledWith("github_create_pr", {
+        repoPath: "/r",
+        title: "Title",
+        body: "Body",
+        head: "feat",
+        base: "main",
+      });
+    });
+
+    it("invokes start_work_on_issue", () => {
+      git.startWorkOnIssue("/r", 123, "Fix login");
+      expect(invoke).toHaveBeenCalledWith("start_work_on_issue", {
+        repoPath: "/r",
+        number: 123,
+        title: "Fix login",
+      });
+    });
+  });
 });

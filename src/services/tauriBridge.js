@@ -246,3 +246,20 @@ export const getBranchDiff = (repoPath, branch, target) =>
   invoke("get_branch_diff", { repoPath, branch, target });
 
 export const gitStageHunk = (repoPath, patch) => invoke("git_stage_hunk", { repoPath, patch });
+
+// -- github -------------------------------------------------------------------
+
+export const saveGithubToken = (token) => invoke("save_github_token", { token });
+export const getGithubToken = () => invoke("get_github_token");
+export const deleteGithubToken = () => invoke("delete_github_token");
+export const testGithubConnection = (token) =>
+  invoke("test_github_token", { token: token || null });
+export const getRepoOrigin = (repoPath) => invoke("get_repo_origin", { repoPath });
+export const githubSearchPrs = (repoPath) => invoke("github_search_prs", { repoPath });
+export const githubGetLaunchpadItems = (repoPath) =>
+  invoke("github_get_launchpad_items", { repoPath });
+export const githubGetPr = (repoPath, number) => invoke("github_get_pr", { repoPath, number });
+export const githubCreatePr = (repoPath, title, body, head, base) =>
+  invoke("github_create_pr", { repoPath, title, body: body || "", head, base });
+export const startWorkOnIssue = (repoPath, number, title) =>
+  invoke("start_work_on_issue", { repoPath, number, title });
