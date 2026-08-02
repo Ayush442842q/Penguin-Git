@@ -228,7 +228,7 @@ impl PenguinMcpServer {
         let commit_hash = commit::commit(path, &args.message, args.body.as_deref(), amend)
             .map_err(|e| e.to_string())?;
         mcp_event::notify_mcp_mutation("git_commit", &args.repo_path).await;
-        Ok(format!("Committed {}", commit_hash))
+        Ok(format!("Committed {commit_hash}"))
     }
 
     #[tool(description = "Checkout a branch or commit")]
@@ -341,12 +341,12 @@ impl PenguinMcpServer {
         let index = args.index.unwrap_or(0);
         let stashes = stash::list_stashes(path).map_err(|e| e.to_string())?;
         if stashes.len() <= index {
-            return Err(format!("Stash index {} out of bounds", index));
+            return Err(format!("Stash index {index} out of bounds"));
         }
         let hash = &stashes[index].hash;
         stash::pop_stash(path, index, hash).map_err(|e| e.to_string())?;
         mcp_event::notify_mcp_mutation("git_stash_pop", &args.repo_path).await;
-        Ok(format!("Popped stash@{{{}}}", index))
+        Ok(format!("Popped stash@{{{index}}}"))
     }
 
     #[tool(description = "Discard working tree changes to a file")]
