@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../../services/tauriBridge", async () => {
@@ -173,7 +173,9 @@ describe("DiffViewer", () => {
       await waitFor(() => expect(screen.getByText("+first commit content")).toBeInTheDocument());
 
       // Switch selection; the new diff hasn't resolved yet.
-      useRepoStore.setState({ selectedCommit: "second0" });
+      act(() => {
+        useRepoStore.getState().selectCommit("second0");
+      });
 
       await waitFor(() => {
         expect(screen.queryByText("+first commit content")).not.toBeInTheDocument();

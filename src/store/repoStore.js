@@ -1,36 +1,35 @@
 import { create } from "zustand";
 import * as git from "../services/tauriBridge";
 
-const RECENT_REPOS_KEY = "penguingit.recentRepos";
-const MAX_RECENT_REPOS = 10;
-
-/** Recent repo paths are UI convenience, not secrets — localStorage is fine here. */
-function loadRecentRepos() {
-  try {
-    const raw = localStorage.getItem(RECENT_REPOS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function persistRecentRepos(repos) {
-  try {
-    localStorage.setItem(RECENT_REPOS_KEY, JSON.stringify(repos));
-  } catch {
-    // A full or disabled localStorage shouldn't break opening repositories.
-  }
-}
+export const createEmptyRepoSlice = (repo) => ({
+  repo,
+  status: null,
+  commits: [],
+  layout: { rows: [], laneCount: 0 },
+  branches: [],
+  remotes: [],
+  stashes: [],
+  submodules: [],
+  operationState: { kind: null, headName: null, onto: null, conflictedPaths: [] },
+  activeConflictPath: null,
+  interactiveRebaseModal: null,
+  selectedCommit: null,
+  selectedFile: null,
+});
 
 /**
- * Central repository state.
+ * Multi-repository store.
  *
- * Refreshes are driven entirely by the Rust watcher's `repo-changed` event —
- * there is deliberately no polling anywhere in this store. The prototype
- * re-ran every git command on a 6-second interval whether or not anything had
- * changed, which burned CPU and still lagged behind real edits.
+ * `repos`: Record<RepoId, RepoSlice>
+ * `activeRepoId`: currently active repository ID
+ * Top-level fields (repo, status, commits, etc.) mirror the active repo slice
+ * for maximum convenience and backward compatibility.
  */
 export const useRepoStore = create((set, get) => ({
+  repos: {},
+  activeRepoId: null,
+  recentRepos: [],
+
   repo: null,
   status: null,
   commits: [],
@@ -38,40 +37,201 @@ export const useRepoStore = create((set, get) => ({
   branches: [],
   remotes: [],
   stashes: [],
-  recentRepos: loadRecentRepos(),
-
+  submodules: [],
   operationState: { kind: null, headName: null, onto: null, conflictedPaths: [] },
   activeConflictPath: null,
-  interactiveRebaseModal: null, // { open: true, baseRef: '...', commits: [] }
-  undoToast: null, // { id, description, timestamp }
-
-  loading: false,
-  error: null,
-  /** Set while a mutating git operation is in flight, to disable double-clicks. */
-  busy: false,
-
+  interactiveRebaseModal: null,
   selectedCommit: null,
   selectedFile: null,
 
+  undoToast: null,
+  loading: false,
+  error: null,
+  busy: false,
+
+  getActiveSlice: () => {
+    const { repos, activeRepoId } = get();
+    return activeRepoId ? repos[activeRepoId] || null : null;
+  },
+
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
-  selectCommit: (selectedCommit) => set({ selectedCommit, selectedFile: null }),
-  selectFile: (selectedFile) => set({ selectedFile }),
-  openConflictEditor: (path) => set({ activeConflictPath: path }),
-  closeConflictEditor: () => set({ activeConflictPath: null }),
-  openInteractiveRebase: (baseRef, commits) =>
-    set({ interactiveRebaseModal: { open: true, baseRef, commits } }),
-  closeInteractiveRebase: () => set({ interactiveRebaseModal: null }),
+
+  syncActiveTopLevel: (targetRepoId = get().activeRepoId) => {
+    const slice = targetRepoId ? get().repos[targetRepoId] : null;
+    if (slice) {
+      set({
+        repo: slice.repo,
+        status: slice.status,
+        commits: slice.commits,
+        layout: slice.layout,
+        branches: slice.branches,
+        remotes: slice.remotes,
+        stashes: slice.stashes,
+        submodules: slice.submodules,
+        operationState: slice.operationState,
+        activeConflictPath: slice.activeConflictPath,
+        interactiveRebaseModal: slice.interactiveRebaseModal,
+        selectedCommit: slice.selectedCommit,
+        selectedFile: slice.selectedFile,
+      });
+    } else {
+      set({
+        repo: null,
+        status: null,
+        commits: [],
+        layout: { rows: [], laneCount: 0 },
+        branches: [],
+        remotes: [],
+        stashes: [],
+        submodules: [],
+        operationState: { kind: null, headName: null, onto: null, conflictedPaths: [] },
+        activeConflictPath: null,
+        interactiveRebaseModal: null,
+        selectedCommit: null,
+        selectedFile: null,
+      });
+    }
+  },
+
+  setActiveRepoId: (activeRepoId) => {
+    set({ activeRepoId });
+    get().syncActiveTopLevel(activeRepoId);
+    if (activeRepoId) {
+      get().refresh(activeRepoId);
+    }
+  },
+
+  loadRecentRepos: async () => {
+    try {
+      const recent = await git.listRecentRepos();
+      set({ recentRepos: recent });
+    } catch {
+      set({ recentRepos: [] });
+    }
+  },
+
+  selectCommit: (selectedCommit) => {
+    const activeRepoId = get().activeRepoId;
+    if (!activeRepoId) return;
+    set((state) => {
+      const updatedSlice = {
+        ...state.repos[activeRepoId],
+        selectedCommit,
+        selectedFile: null,
+      };
+      return {
+        selectedCommit,
+        selectedFile: null,
+        repos: {
+          ...state.repos,
+          [activeRepoId]: updatedSlice,
+        },
+      };
+    });
+  },
+
+  selectFile: (selectedFile) => {
+    const activeRepoId = get().activeRepoId;
+    if (!activeRepoId) return;
+    set((state) => {
+      const updatedSlice = {
+        ...state.repos[activeRepoId],
+        selectedFile,
+      };
+      return {
+        selectedFile,
+        repos: {
+          ...state.repos,
+          [activeRepoId]: updatedSlice,
+        },
+      };
+    });
+  },
+
+  openConflictEditor: (path) => {
+    const activeRepoId = get().activeRepoId;
+    if (!activeRepoId) return;
+    set((state) => {
+      const updatedSlice = {
+        ...state.repos[activeRepoId],
+        activeConflictPath: path,
+      };
+      return {
+        activeConflictPath: path,
+        repos: {
+          ...state.repos,
+          [activeRepoId]: updatedSlice,
+        },
+      };
+    });
+  },
+
+  closeConflictEditor: () => {
+    const activeRepoId = get().activeRepoId;
+    if (!activeRepoId) return;
+    set((state) => {
+      const updatedSlice = {
+        ...state.repos[activeRepoId],
+        activeConflictPath: null,
+      };
+      return {
+        activeConflictPath: null,
+        repos: {
+          ...state.repos,
+          [activeRepoId]: updatedSlice,
+        },
+      };
+    });
+  },
+
+  openInteractiveRebase: (baseRef, commits) => {
+    const activeRepoId = get().activeRepoId;
+    if (!activeRepoId) return;
+    const modal = { open: true, baseRef, commits };
+    set((state) => {
+      const updatedSlice = {
+        ...state.repos[activeRepoId],
+        interactiveRebaseModal: modal,
+      };
+      return {
+        interactiveRebaseModal: modal,
+        repos: {
+          ...state.repos,
+          [activeRepoId]: updatedSlice,
+        },
+      };
+    });
+  },
+
+  closeInteractiveRebase: () => {
+    const activeRepoId = get().activeRepoId;
+    if (!activeRepoId) return;
+    set((state) => {
+      const updatedSlice = {
+        ...state.repos[activeRepoId],
+        interactiveRebaseModal: null,
+      };
+      return {
+        interactiveRebaseModal: null,
+        repos: {
+          ...state.repos,
+          [activeRepoId]: updatedSlice,
+        },
+      };
+    });
+  },
+
   setUndoToast: (undoToast) => set({ undoToast }),
   dismissUndoToast: () => set({ undoToast: null }),
 
   triggerUndo: async () => {
-    const { repo } = get();
-    if (!repo) return false;
+    const activeSlice = get().getActiveSlice();
+    if (!activeSlice || !activeSlice.repo) return false;
     try {
-      const snapshot = await git.undoLastAction(repo.path);
+      const snapshot = await git.undoLastAction(activeSlice.repo.id);
       set({ undoToast: { message: `Undid: ${snapshot.description}`, undone: true } });
-      await get().refresh();
+      await get().refresh(activeSlice.repo.id);
       return true;
     } catch (err) {
       set({ error: String(err) });
@@ -79,7 +239,6 @@ export const useRepoStore = create((set, get) => ({
     }
   },
 
-  /** Opens the native folder picker, then the chosen repository. */
   openRepoViaPicker: async () => {
     const path = await git.pickRepositoryFolder();
     if (!path) return false;
@@ -90,19 +249,28 @@ export const useRepoStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const repo = await git.openRepo(path);
-      const recentRepos = [repo.path, ...get().recentRepos.filter((p) => p !== repo.path)].slice(
-        0,
-        MAX_RECENT_REPOS
-      );
-      persistRecentRepos(recentRepos);
+      const existingSlice = get().repos[repo.id];
+      const slice = existingSlice || createEmptyRepoSlice(repo);
 
-      set({ repo, recentRepos, selectedCommit: null, selectedFile: null });
-      await get().refresh();
+      const updatedSlice = {
+        ...slice,
+        repo,
+      };
+
+      set((state) => ({
+        repos: {
+          ...state.repos,
+          [repo.id]: updatedSlice,
+        },
+        activeRepoId: repo.id,
+      }));
+
+      get().syncActiveTopLevel(repo.id);
+
+      await get().loadRecentRepos();
+      await get().refresh(repo.id);
       return true;
     } catch (error) {
-      // Only report the failure. Clearing `repo` here would close the working
-      // repository because the user mistyped a *different* path — losing their
-      // place for an error that had nothing to do with it.
       set({ error: String(error) });
       return false;
     } finally {
@@ -110,96 +278,126 @@ export const useRepoStore = create((set, get) => ({
     }
   },
 
-  closeRepo: async () => {
-    const { repo } = get();
-    if (repo) await git.closeRepo(repo.id).catch(() => {});
+  closeRepo: async (targetRepoId = get().activeRepoId) => {
+    if (!targetRepoId) return;
+    await git.closeRepo(targetRepoId).catch(() => {});
+
+    const remainingRepos = { ...get().repos };
+    delete remainingRepos[targetRepoId];
+
+    const openIds = Object.keys(remainingRepos);
+    const nextActiveId =
+      get().activeRepoId === targetRepoId
+        ? openIds.length > 0
+          ? openIds[0]
+          : null
+        : get().activeRepoId;
+
     set({
-      repo: null,
-      status: null,
-      commits: [],
-      layout: { rows: [], laneCount: 0 },
-      branches: [],
-      remotes: [],
-      stashes: [],
-      selectedCommit: null,
-      selectedFile: null,
+      repos: remainingRepos,
+      activeRepoId: nextActiveId,
+    });
+
+    get().syncActiveTopLevel(nextActiveId);
+  },
+
+  forgetRecentRepo: async (idOrPath) => {
+    try {
+      await git.forgetRecentRepo(idOrPath);
+      await get().loadRecentRepos();
+    } catch (err) {
+      set({ error: String(err) });
+    }
+  },
+
+  initSubmodule: async (submodulePath) => {
+    const activeSlice = get().getActiveSlice();
+    if (!activeSlice || !activeSlice.repo) return false;
+    return get().run(async () => {
+      await git.initSubmodule(activeSlice.repo.path, submodulePath);
     });
   },
 
-  forgetRecentRepo: (path) => {
-    const recentRepos = get().recentRepos.filter((p) => p !== path);
-    persistRecentRepos(recentRepos);
-    set({ recentRepos });
+  updateSubmodule: async (submodulePath) => {
+    const activeSlice = get().getActiveSlice();
+    if (!activeSlice || !activeSlice.repo) return false;
+    return get().run(async () => {
+      await git.updateSubmodule(activeSlice.repo.path, submodulePath);
+    });
   },
 
-  /**
-   * Reloads everything for the open repo.
-   *
-   * Fetched in parallel because none of these depend on each other, and a
-   * serial chain would make the post-commit refresh visibly stagger.
-   */
-  refresh: async () => {
-    const { repo } = get();
-    if (!repo) return;
-    const requestedFor = repo.id;
+  refresh: async (targetRepoId = get().activeRepoId) => {
+    if (!targetRepoId) return;
+    const targetSlice = get().repos[targetRepoId];
+    if (!targetSlice || !targetSlice.repo) return;
+
+    const repoPath = targetSlice.repo.path;
 
     try {
-      const [status, graph, branches, remotes, stashes, operationState] = await Promise.all([
-        git.getStatus(repo.path),
-        git.getCommitGraph(repo.path),
-        git.getBranches(repo.path),
-        git.getRemotes(repo.path),
-        git.getStashes(repo.path),
-        git.getRepoOperationState(repo.path).catch(() => ({
-          kind: null,
-          headName: null,
-          onto: null,
-          conflictedPaths: [],
-        })),
-      ]);
+      const [status, graph, branches, remotes, stashes, submodules, operationState] =
+        await Promise.all([
+          git.getStatus(repoPath),
+          git.getCommitGraph(repoPath),
+          git.getBranches(repoPath),
+          git.getRemotes(repoPath),
+          git.getStashes(repoPath),
+          git.getSubmodules(repoPath).catch(() => []),
+          git.getRepoOperationState(targetRepoId).catch(() => ({
+            kind: null,
+            headName: null,
+            onto: null,
+            conflictedPaths: [],
+          })),
+        ]);
 
-      // The user can switch or close the repository while these are in flight.
-      // Writing anyway would paint one repository's commits, branches, and
-      // stashes over another's — and the stash indices would then point into
-      // the wrong stack.
-      if (get().repo?.id !== requestedFor) return;
+      if (!get().repos[targetRepoId]) return;
 
-      set({
+      const updatedSlice = {
+        ...get().repos[targetRepoId],
         status,
         commits: graph.commits,
         layout: graph.layout,
         branches,
         remotes,
         stashes,
+        submodules,
         operationState,
+      };
+
+      set((state) => ({
+        repos: {
+          ...state.repos,
+          [targetRepoId]: updatedSlice,
+        },
         error: null,
-      });
+      }));
+
+      if (get().activeRepoId === targetRepoId) {
+        get().syncActiveTopLevel(targetRepoId);
+      }
     } catch (error) {
-      if (get().repo?.id !== requestedFor) return;
-      set({ error: String(error) });
+      if (get().repos[targetRepoId]) {
+        set({ error: String(error) });
+      }
     }
   },
 
-  /**
-   * Runs a mutating git operation, then refreshes.
-   *
-   * The explicit refresh isn't redundant with the watcher: it makes the UI
-   * respond immediately rather than after the debounce window, and it covers
-   * operations that touch nothing the watcher looks at.
-   */
-  run: async (operation) => {
-    const { repo } = get();
-    if (!repo) return false;
+  run: async (operation, targetRepoId = get().activeRepoId) => {
+    if (!targetRepoId) return false;
+    const targetSlice = get().repos[targetRepoId];
+    if (!targetSlice || !targetSlice.repo) return false;
 
-    const requestedFor = repo.id;
     set({ busy: true, error: null });
     try {
-      await operation(repo.path);
-      if (get().repo?.id !== requestedFor) return false;
-      await get().refresh();
+      await operation(targetSlice.repo.path);
+      if (get().repos[targetRepoId]) {
+        await get().refresh(targetRepoId);
+      }
       return true;
     } catch (error) {
-      if (get().repo?.id === requestedFor) set({ error: String(error) });
+      if (get().repos[targetRepoId]) {
+        set({ error: String(error) });
+      }
       return false;
     } finally {
       set({ busy: false });
@@ -208,12 +406,15 @@ export const useRepoStore = create((set, get) => ({
 }));
 
 /**
- * Wires the store to the Rust watcher.
- *
- * Called once at app startup. Returns an unlisten function.
+ * Wires store to the Rust watcher.
  */
 export async function subscribeToRepoChanges() {
-  return git.onRepoChanged(() => {
-    useRepoStore.getState().refresh();
+  return git.onRepoChanged((event) => {
+    const payload = event?.payload;
+    if (payload?.repo_id) {
+      useRepoStore.getState().refresh(payload.repo_id);
+    } else {
+      useRepoStore.getState().refresh();
+    }
   });
 }

@@ -196,3 +196,16 @@ export const interactiveRebase = (repoId, baseRef, todoItems) =>
 export const undoLastAction = (repoId) => invoke("undo_last_action", { repoId: { 0: repoId } });
 
 export const getUndoHistory = () => invoke("get_undo_history");
+
+// -- registry -----------------------------------------------------------------
+
+export const listRecentRepos = () => invoke("list_recent_repos");
+export const forgetRecentRepo = (id) => invoke("forget_recent_repo", { id });
+
+// -- submodules ---------------------------------------------------------------
+
+export const getSubmodules = (repoPath) => invoke("get_submodules", { repoPath });
+export const initSubmodule = (repoPath, submodulePath) =>
+  invoke("init_submodule", { repoPath, submodulePath });
+export const updateSubmodule = (repoPath, submodulePath) =>
+  invoke("update_submodule", { repoPath, submodulePath });

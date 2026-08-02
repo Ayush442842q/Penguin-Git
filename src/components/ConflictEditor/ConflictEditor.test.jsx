@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ConflictEditor } from "./ConflictEditor";
-import { useRepoStore } from "../../store/repoStore";
+import { setStore } from "../../test/helpers";
 import * as git from "../../services/tauriBridge";
 
 vi.mock("../../services/tauriBridge", () => ({
@@ -13,10 +13,12 @@ vi.mock("../../services/tauriBridge", () => ({
 }));
 
 describe("ConflictEditor Component", () => {
+  const MOCK_REPO = { id: "/mock/repo", path: "/mock/repo", name: "repo", headBranch: "main" };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    useRepoStore.setState({
-      repo: { id: "/mock/repo", path: "/mock/repo" },
+    setStore({
+      repo: MOCK_REPO,
       operationState: {
         kind: "merge",
         headName: "feature",
@@ -56,7 +58,8 @@ describe("ConflictEditor Component", () => {
   });
 
   it("enables Continue button when zero conflicts remain", () => {
-    useRepoStore.setState({
+    setStore({
+      repo: MOCK_REPO,
       operationState: {
         kind: "merge",
         headName: "feature",

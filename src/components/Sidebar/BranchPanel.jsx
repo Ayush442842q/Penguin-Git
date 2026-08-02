@@ -101,7 +101,8 @@ function BranchRow({ branch, busy, run }) {
 }
 
 export default function BranchPanel() {
-  const branches = useRepoStore((s) => s.branches);
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const branches = useRepoStore((s) => s.repos[activeRepoId]?.branches || []);
   const busy = useRepoStore((s) => s.busy);
   const run = useRepoStore((s) => s.run);
 

@@ -44,12 +44,14 @@ function Section({ title, entries, children }) {
 }
 
 export default function StagingPanel() {
-  const repo = useRepoStore((s) => s.repo);
-  const status = useRepoStore((s) => s.status);
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
+  const repo = slice?.repo;
+  const status = slice?.status;
+  const selectedFile = slice?.selectedFile;
+  const selectFile = useRepoStore((s) => s.selectFile);
   const busy = useRepoStore((s) => s.busy);
   const run = useRepoStore((s) => s.run);
-  const selectedFile = useRepoStore((s) => s.selectedFile);
-  const selectFile = useRepoStore((s) => s.selectFile);
 
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");

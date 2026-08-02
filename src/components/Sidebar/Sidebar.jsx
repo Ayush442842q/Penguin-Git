@@ -5,16 +5,21 @@ import BranchPanel from "./BranchPanel";
 import StashPanel from "./StashPanel";
 import "./Sidebar.css";
 
+import SubmodulePanel from "../SubmodulePanel/SubmodulePanel";
+import "./Sidebar.css";
+
 export default function Sidebar() {
-  const repo = useRepoStore((s) => s.repo);
-  const remotes = useRepoStore((s) => s.remotes);
-  const status = useRepoStore((s) => s.status);
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
   const busy = useRepoStore((s) => s.busy);
   const run = useRepoStore((s) => s.run);
 
   const [showRemotes, setShowRemotes] = useState(false);
 
-  if (!repo) return null;
+  if (!slice || !slice.repo) return null;
+  const repo = slice.repo;
+  const remotes = slice.remotes || [];
+  const status = slice.status;
 
   const ahead = status?.ahead ?? 0;
   const behind = status?.behind ?? 0;
@@ -56,6 +61,7 @@ export default function Sidebar() {
 
         <BranchPanel />
         <StashPanel />
+        <SubmodulePanel />
 
         <div className="sidebar-section">
           <button

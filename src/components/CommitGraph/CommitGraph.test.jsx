@@ -193,8 +193,8 @@ describe("CommitGraph", () => {
       expect(screen.getByText(/no commits match/i)).toBeInTheDocument();
     });
 
-    it("hides the WIP row while filtering, since it has nothing to match on", () => {
-      useRepoStore.setState({
+    it("hides the WIP row while a filter is active", () => {
+      setStore({
         status: {
           branch: "main",
           upstream: null,
@@ -255,7 +255,7 @@ describe("CommitGraph", () => {
     });
 
     it("does not open on the WIP row, which has no commit to act on", () => {
-      useRepoStore.setState({
+      setStore({
         status: {
           branch: "main",
           upstream: null,

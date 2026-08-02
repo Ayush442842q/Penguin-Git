@@ -11,8 +11,10 @@ function formatDate(seconds) {
 }
 
 export default function StashPanel() {
-  const stashes = useRepoStore((s) => s.stashes);
-  const status = useRepoStore((s) => s.status);
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
+  const stashes = slice?.stashes || [];
+  const status = slice?.status;
   const busy = useRepoStore((s) => s.busy);
   const run = useRepoStore((s) => s.run);
   const selectFile = useRepoStore((s) => s.selectFile);

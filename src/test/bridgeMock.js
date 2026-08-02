@@ -69,6 +69,11 @@ export const BRIDGE_FUNCTIONS = [
   "interactiveRebase",
   "undoLastAction",
   "getUndoHistory",
+  "listRecentRepos",
+  "forgetRecentRepo",
+  "getSubmodules",
+  "initSubmodule",
+  "updateSubmodule",
 ];
 
 export function makeBridgeMock() {

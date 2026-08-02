@@ -1,0 +1,37 @@
+.launcher-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.launcher-repo-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+}
+
+.launcher-repo-name {
+  font-weight: 600;
+  color: var(--text-color, #e0e0e0);
+}
+
+.launcher-kind-badge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.launcher-remove-btn {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+.launcher-remove-btn:hover {
+  opacity: 1;
+  color: #ff5555;
+}
