@@ -105,6 +105,17 @@ pub fn run() {
             commands::ai::ai_generate_pr_description,
             commands::ai::get_branch_diff,
             commands::ai::git_stage_hunk,
+            // github
+            commands::github::save_github_token,
+            commands::github::get_github_token,
+            commands::github::delete_github_token,
+            commands::github::test_github_token,
+            commands::github::get_repo_origin,
+            commands::github::github_search_prs,
+            commands::github::github_get_launchpad_items,
+            commands::github::github_get_pr,
+            commands::github::github_create_pr,
+            commands::github::start_work_on_issue,
         ])
         .run(tauri::generate_context!())
         .expect("error while running PenguinGit");
