@@ -77,6 +77,15 @@ export const BRIDGE_FUNCTIONS = [
   "getMcpStatus",
   "setMcpEnabled",
   "onMcpEvent",
+  "saveAiConfig",
+  "getAiConfig",
+  "testAiConnection",
+  "aiComposeCommitMessage",
+  "aiExplainCommit",
+  "aiExplainBranch",
+  "aiGeneratePrDescription",
+  "getBranchDiff",
+  "gitStageHunk",
 ];
 
 export function makeBridgeMock() {
