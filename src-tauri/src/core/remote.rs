@@ -112,6 +112,65 @@ pub fn push(
     Ok(())
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoOrigin {
+    pub owner: String,
+    pub repo: String,
+}
+
+/// Parses a remote URL (SSH or HTTPS) and extracts owner and repository name.
+/// Handles:
+/// - `git@github.com:owner/repo.git`
+/// - `ssh://git@github.com/owner/repo.git`
+/// - `https://github.com/owner/repo.git`
+/// - `https://github.com/owner/repo`
+/// - `https://user:token@github.com/owner/repo.git`
+pub fn parse_remote_url(url: &str) -> Option<RepoOrigin> {
+    let trimmed = url.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let cleaned = trimmed.strip_suffix('/').unwrap_or(trimmed);
+    let cleaned = cleaned.strip_suffix(".git").unwrap_or(cleaned);
+
+    let path_part = if cleaned.contains("://") {
+        let pos = cleaned.find("://")?;
+        let after_proto = &cleaned[pos + 3..];
+        let slash_pos = after_proto.find('/')?;
+        &after_proto[slash_pos + 1..]
+    } else if let Some((_host, path)) = cleaned.rsplit_once(':') {
+        path.trim_start_matches('/')
+    } else {
+        cleaned
+    };
+
+    let parts: Vec<&str> = path_part
+        .split('/')
+        .filter(|p| !p.is_empty())
+        .collect();
+
+    if parts.len() >= 2 {
+        let owner = parts[parts.len() - 2].to_string();
+        let repo = parts[parts.len() - 1].to_string();
+        if !owner.is_empty() && !repo.is_empty() {
+            return Some(RepoOrigin { owner, repo });
+        }
+    }
+
+    None
+}
+
+/// Gets the `origin` remote URL for the repo at `repo_path` and parses its `{ owner, repo }`.
+pub fn get_repo_origin(repo_path: &Path) -> Result<RepoOrigin, GitError> {
+    let url = run_git(repo_path, &["remote", "get-url", "origin"])?;
+    parse_remote_url(&url).ok_or_else(|| GitError::CommandFailed {
+        exit_code: None,
+        stderr: format!("Failed to parse owner and repo from remote URL: {}", url.trim()),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -350,5 +409,50 @@ mod tests {
         assert!(repo
             .git(&["log", "--oneline"])
             .contains("Work from elsewhere"));
+    }
+
+    #[test]
+    fn parse_remote_url_supports_ssh_and_https_formats() {
+        // SSH SCP format
+        let ssh1 = parse_remote_url("git@github.com:Ayush442842q/PenguinGit.git").unwrap();
+        assert_eq!(ssh1.owner, "Ayush442842q");
+        assert_eq!(ssh1.repo, "PenguinGit");
+
+        // SSH scheme format
+        let ssh2 = parse_remote_url("ssh://git@github.com/Ayush442842q/PenguinGit.git").unwrap();
+        assert_eq!(ssh2.owner, "Ayush442842q");
+        assert_eq!(ssh2.repo, "PenguinGit");
+
+        // HTTPS with .git
+        let https1 = parse_remote_url("https://github.com/Ayush442842q/PenguinGit.git").unwrap();
+        assert_eq!(https1.owner, "Ayush442842q");
+        assert_eq!(https1.repo, "PenguinGit");
+
+        // HTTPS without .git
+        let https2 = parse_remote_url("https://github.com/Ayush442842q/PenguinGit").unwrap();
+        assert_eq!(https2.owner, "Ayush442842q");
+        assert_eq!(https2.repo, "PenguinGit");
+
+        // HTTPS with credentials
+        let https3 = parse_remote_url("https://user:token@github.com/Ayush442842q/PenguinGit.git").unwrap();
+        assert_eq!(https3.owner, "Ayush442842q");
+        assert_eq!(https3.repo, "PenguinGit");
+    }
+
+    #[test]
+    fn get_repo_origin_fetches_and_parses_origin_remote() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+
+        add_remote(
+            repo.path(),
+            "origin",
+            "git@github.com:Ayush442842q/PenguinGit.git",
+        )
+        .expect("add origin");
+
+        let origin = get_repo_origin(repo.path()).expect("get_repo_origin");
+        assert_eq!(origin.owner, "Ayush442842q");
+        assert_eq!(origin.repo, "PenguinGit");
     }
 }
