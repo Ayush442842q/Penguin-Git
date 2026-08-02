@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AiPanel from "./AiPanel";
 import GitHubPanel from "./GitHubPanel";
+import CloudPanel from "./CloudPanel";
 import "./Settings.css";
 
 export default function Settings({ isOpen, onClose }) {
@@ -32,7 +33,10 @@ export default function Settings({ isOpen, onClose }) {
             >
               <span>🐙</span> GitHub Integration
             </button>
-            <button className="settings-nav-item" disabled title="Coming in Phase 7">
+            <button
+              className={`settings-nav-item ${activeTab === "cloud" ? "active" : ""}`}
+              onClick={() => setActiveTab("cloud")}
+            >
               <span>☁️</span> Cloud Workspaces
             </button>
           </div>
@@ -40,6 +44,7 @@ export default function Settings({ isOpen, onClose }) {
           <div className="settings-content">
             {activeTab === "ai" && <AiPanel />}
             {activeTab === "github" && <GitHubPanel />}
+            {activeTab === "cloud" && <CloudPanel />}
           </div>
         </div>
       </div>

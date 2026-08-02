@@ -305,3 +305,26 @@ export const addRepoToWorkspace = (workspaceId, repoId) =>
 export const removeRepoFromWorkspace = (workspaceId, repoId) =>
   invoke("remove_repo_from_workspace", { workspaceId, repoId });
 export const listWorkspaceRepos = (workspaceId) => invoke("list_workspace_repos", { workspaceId });
+
+// -- cloud --------------------------------------------------------------------+
+
+export const cloudLogin = (serverUrl, username, password) =>
+  invoke("cloud_login", { serverUrl, username, password });
+export const cloudLogout = () => invoke("cloud_logout");
+export const getCloudSettings = () => invoke("get_cloud_settings");
+export const saveCloudSettings = (serverUrl, token) =>
+  invoke("save_cloud_settings", { serverUrl, token: token || null });
+export const cloudPublishPatch = (title, description, patchData, repoName, baseCommit) =>
+  invoke("cloud_publish_patch", {
+    title,
+    description: description || null,
+    patchData,
+    repoName: repoName || null,
+    baseCommit: baseCommit || null,
+  });
+export const cloudListPatches = () => invoke("cloud_list_patches");
+export const cloudAddComment = (patchId, body) => invoke("cloud_add_comment", { patchId, body });
+export const cloudListComments = (patchId) => invoke("cloud_list_comments", { patchId });
+export const cloudCreateWorkspace = (name) => invoke("cloud_create_workspace", { name });
+export const cloudListWorkspaces = () => invoke("cloud_list_workspaces");
+

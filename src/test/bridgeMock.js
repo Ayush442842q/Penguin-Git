@@ -108,6 +108,16 @@ export const BRIDGE_FUNCTIONS = [
   "addRepoToWorkspace",
   "removeRepoFromWorkspace",
   "listWorkspaceRepos",
+  "cloudLogin",
+  "cloudLogout",
+  "getCloudSettings",
+  "saveCloudSettings",
+  "cloudPublishPatch",
+  "cloudListPatches",
+  "cloudAddComment",
+  "cloudListComments",
+  "cloudCreateWorkspace",
+  "cloudListWorkspaces",
 ];
 
 export function makeBridgeMock() {
