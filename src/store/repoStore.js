@@ -40,6 +40,11 @@ export const useRepoStore = create((set, get) => ({
   stashes: [],
   recentRepos: loadRecentRepos(),
 
+  operationState: { kind: null, headName: null, onto: null, conflictedPaths: [] },
+  activeConflictPath: null,
+  interactiveRebaseModal: null, // { open: true, baseRef: '...', commits: [] }
+  undoToast: null, // { id, description, timestamp }
+
   loading: false,
   error: null,
   /** Set while a mutating git operation is in flight, to disable double-clicks. */
@@ -52,6 +57,27 @@ export const useRepoStore = create((set, get) => ({
   clearError: () => set({ error: null }),
   selectCommit: (selectedCommit) => set({ selectedCommit, selectedFile: null }),
   selectFile: (selectedFile) => set({ selectedFile }),
+  openConflictEditor: (path) => set({ activeConflictPath: path }),
+  closeConflictEditor: () => set({ activeConflictPath: null }),
+  openInteractiveRebase: (baseRef, commits) =>
+    set({ interactiveRebaseModal: { open: true, baseRef, commits } }),
+  closeInteractiveRebase: () => set({ interactiveRebaseModal: null }),
+  setUndoToast: (undoToast) => set({ undoToast }),
+  dismissUndoToast: () => set({ undoToast: null }),
+
+  triggerUndo: async () => {
+    const { repo } = get();
+    if (!repo) return false;
+    try {
+      const snapshot = await git.undoLastAction(repo.path);
+      set({ undoToast: { message: `Undid: ${snapshot.description}`, undone: true } });
+      await get().refresh();
+      return true;
+    } catch (err) {
+      set({ error: String(err) });
+      return false;
+    }
+  },
 
   /** Opens the native folder picker, then the chosen repository. */
   openRepoViaPicker: async () => {
@@ -118,12 +144,18 @@ export const useRepoStore = create((set, get) => ({
     const requestedFor = repo.id;
 
     try {
-      const [status, graph, branches, remotes, stashes] = await Promise.all([
+      const [status, graph, branches, remotes, stashes, operationState] = await Promise.all([
         git.getStatus(repo.path),
         git.getCommitGraph(repo.path),
         git.getBranches(repo.path),
         git.getRemotes(repo.path),
         git.getStashes(repo.path),
+        git.getRepoOperationState(repo.path).catch(() => ({
+          kind: null,
+          headName: null,
+          onto: null,
+          conflictedPaths: [],
+        })),
       ]);
 
       // The user can switch or close the repository while these are in flight.
@@ -139,6 +171,7 @@ export const useRepoStore = create((set, get) => ({
         branches,
         remotes,
         stashes,
+        operationState,
         error: null,
       });
     } catch (error) {

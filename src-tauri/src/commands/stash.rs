@@ -1,7 +1,10 @@
 use std::path::Path;
+use tauri::State;
 
 use super::to_ipc_error;
+use crate::core::repo::AppState;
 use crate::core::stash::{self, Stash};
+use crate::core::undo::ActionType;
 
 #[tauri::command]
 pub fn get_stashes(repo_path: String) -> Result<Vec<Stash>, String> {
@@ -31,7 +34,19 @@ pub fn apply_stash(repo_path: String, index: usize, hash: String) -> Result<(), 
 
 /// Restores the stash and removes it. Distinct from [`apply_stash`].
 #[tauri::command]
-pub fn pop_stash(repo_path: String, index: usize, hash: String) -> Result<(), String> {
+pub fn pop_stash(
+    state: State<'_, AppState>,
+    repo_path: String,
+    index: usize,
+    hash: String,
+) -> Result<(), String> {
+    state.journal.record(
+        ActionType::StashPop {
+            stash_name: format!("stash@{{{index}}}"),
+        },
+        format!("Pop stash@{{{index}}}"),
+    );
+
     stash::pop_stash(Path::new(&repo_path), index, &hash).map_err(to_ipc_error)
 }
 

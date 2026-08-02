@@ -1,16 +1,32 @@
 use std::path::Path;
+use tauri::State;
 
 use super::to_ipc_error;
 use crate::core::commit::{self, ResetMode};
+use crate::core::exec::run_git;
+use crate::core::repo::AppState;
+use crate::core::undo::ActionType;
 
 #[tauri::command]
 pub fn commit_changes(
+    state: State<'_, AppState>,
     repo_path: String,
     subject: String,
     body: Option<String>,
     amend: bool,
 ) -> Result<String, String> {
-    commit::commit(Path::new(&repo_path), &subject, body.as_deref(), amend).map_err(to_ipc_error)
+    let p = Path::new(&repo_path);
+    let previous_head = run_git(p, &["rev-parse", "HEAD"])
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+
+    state.journal.record(
+        ActionType::Commit { previous_head },
+        format!("Commit: {subject}"),
+    );
+
+    commit::commit(p, &subject, body.as_deref(), amend).map_err(to_ipc_error)
 }
 
 #[tauri::command]

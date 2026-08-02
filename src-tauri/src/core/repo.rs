@@ -45,6 +45,7 @@ pub struct RepoState {
 #[derive(Debug, Default)]
 pub struct AppState {
     repos: Mutex<HashMap<RepoId, RepoState>>,
+    pub journal: crate::core::undo::ActionJournal,
 }
 
 impl AppState {
