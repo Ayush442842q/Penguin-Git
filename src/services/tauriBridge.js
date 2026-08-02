@@ -293,3 +293,15 @@ export async function pickPatchFile() {
   });
   return typeof selected === "string" ? selected : null;
 }
+
+// -- workspace ----------------------------------------------------------------
+
+export const createWorkspace = (name) => invoke("create_workspace", { name });
+export const renameWorkspace = (id, newName) => invoke("rename_workspace", { id, newName });
+export const deleteWorkspace = (id) => invoke("delete_workspace", { id });
+export const listWorkspaces = () => invoke("list_workspaces");
+export const addRepoToWorkspace = (workspaceId, repoId) =>
+  invoke("add_repo_to_workspace", { workspaceId, repoId });
+export const removeRepoFromWorkspace = (workspaceId, repoId) =>
+  invoke("remove_repo_from_workspace", { workspaceId, repoId });
+export const listWorkspaceRepos = (workspaceId) => invoke("list_workspace_repos", { workspaceId });

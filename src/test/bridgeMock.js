@@ -101,6 +101,13 @@ export const BRIDGE_FUNCTIONS = [
   "applyPatch",
   "savePatchFile",
   "pickPatchFile",
+  "createWorkspace",
+  "renameWorkspace",
+  "deleteWorkspace",
+  "listWorkspaces",
+  "addRepoToWorkspace",
+  "removeRepoFromWorkspace",
+  "listWorkspaceRepos",
 ];
 
 export function makeBridgeMock() {
