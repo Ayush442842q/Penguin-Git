@@ -387,4 +387,274 @@ mod tests {
 
         assert!(repo.file_path("feature.txt").exists());
     }
+
+    // -- Option-injection guard ---------------------------------------------
+
+    #[test]
+    fn ordinary_names_pass_the_option_guard() {
+        for name in [
+            "main",
+            "feature/login",
+            "release-1.0",
+            "fix.a-b_c",
+            "v1.0.0",
+            // A dash anywhere but the front is harmless.
+            "wip--rebase",
+        ] {
+            assert!(
+                reject_option_like(name).is_ok(),
+                "{name:?} is a legitimate ref name and must be allowed"
+            );
+        }
+    }
+
+    #[test]
+    fn names_that_git_would_read_as_options_are_refused() {
+        // The trailing `--` in every call site separates revisions from paths;
+        // it does *not* stop git parsing a leading-dash value as a flag. These
+        // are the shapes that would otherwise reach the command line as options.
+        for name in [
+            "--force",
+            "-D",
+            "--upload-pack=/bin/sh",
+            "--exec=rm -rf /",
+            "-",
+        ] {
+            let Err(err) = reject_option_like(name) else {
+                panic!("{name:?} looks like an option and must be refused");
+            };
+            assert!(
+                err.to_string().contains("refusing to pass"),
+                "the error should name the offending value, got: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn branch_operations_refuse_option_like_arguments() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+
+        assert!(create_branch(repo.path(), "--force", None).is_err());
+        assert!(create_branch(repo.path(), "ok", Some("--all")).is_err());
+        assert!(delete_branch(repo.path(), "-D", false).is_err());
+        assert!(rename_branch(repo.path(), "--old", "new").is_err());
+        assert!(rename_branch(repo.path(), "old", "--new").is_err());
+        assert!(checkout(repo.path(), "--orphan").is_err());
+        assert!(checkout_new(repo.path(), "-b", None).is_err());
+        assert!(merge_branch(repo.path(), "--abort").is_err());
+        assert!(rebase_onto(repo.path(), "--continue").is_err());
+
+        // The guard must reject *before* git runs, so nothing changed.
+        let names: Vec<String> = list_branches(repo.path())
+            .expect("list")
+            .into_iter()
+            .map(|b| b.name)
+            .collect();
+        assert_eq!(names, vec!["main".to_string()]);
+    }
+
+    // -- Checkout safety -----------------------------------------------------
+
+    #[test]
+    fn checkout_prefers_the_branch_over_a_same_named_path() {
+        // Without the trailing `--`, `git checkout release` on a repo that has
+        // both a branch and a file called `release` restores the file from the
+        // index — silently discarding the user's edits instead of switching.
+        let repo = FixtureRepo::new();
+        repo.commit(
+            "release",
+            "edited by the user\n",
+            "Add a file named release",
+        );
+        repo.git(&["branch", "release"]);
+        repo.write("release", "unsaved work\n");
+
+        checkout(repo.path(), "release").expect("checkout should switch branches");
+
+        assert_eq!(
+            repo.git(&["symbolic-ref", "--short", "HEAD"]).trim(),
+            "release",
+            "the branch should be checked out"
+        );
+        assert_eq!(
+            std::fs::read_to_string(repo.file_path("release")).expect("read"),
+            "unsaved work\n",
+            "the identically-named file must not have been restored over"
+        );
+    }
+
+    // -- Listing edge cases --------------------------------------------------
+
+    #[test]
+    fn a_local_branch_named_like_a_remote_ref_is_still_local() {
+        // `origin/main` is a legal local branch name, and once the namespace is
+        // stripped it is indistinguishable from the remote-tracking ref. Reading
+        // `%(refname)` rather than the short name is what keeps them apart.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        repo.git(&["branch", "origin/main"]);
+
+        let branches = list_branches(repo.path()).expect("list");
+        let impostor = branches
+            .iter()
+            .find(|b| b.name == "origin/main")
+            .expect("the local branch should be listed");
+
+        assert!(
+            !impostor.is_remote,
+            "a local branch named origin/main must not be treated as remote-tracking"
+        );
+    }
+
+    #[test]
+    fn the_symbolic_origin_head_pointer_is_not_listed() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        let _bare = repo.add_bare_remote("origin");
+        repo.git(&["push", "-u", "origin", "main"]);
+        repo.git(&[
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/main",
+        ]);
+
+        let branches = list_branches(repo.path()).expect("list");
+
+        assert!(
+            !branches.iter().any(|b| b.name == "origin/HEAD"),
+            "origin/HEAD is a pointer, not something a user can check out"
+        );
+        assert!(branches.iter().any(|b| b.name == "origin/main"));
+    }
+
+    #[test]
+    fn a_local_branch_ending_in_head_is_not_filtered_out() {
+        // The `/HEAD` skip is scoped to remotes precisely so a local branch that
+        // happens to end that way survives.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        repo.git(&["branch", "wip/HEAD"]);
+
+        let branches = list_branches(repo.path()).expect("list");
+
+        assert!(branches.iter().any(|b| b.name == "wip/HEAD"));
+    }
+
+    #[test]
+    fn local_branches_sort_before_remote_ones() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        let _bare = repo.add_bare_remote("origin");
+        repo.git(&["push", "-u", "origin", "main"]);
+        repo.git(&["branch", "zebra"]);
+
+        let branches = list_branches(repo.path()).expect("list");
+        let names: Vec<&str> = branches.iter().map(|b| b.name.as_str()).collect();
+
+        assert_eq!(
+            names,
+            vec!["main", "zebra", "origin/main"],
+            "locals first, then alphabetical within each group"
+        );
+    }
+
+    #[test]
+    fn a_branch_whose_upstream_is_gone_reports_zero_divergence() {
+        // A deleted remote branch leaves the local `branch.<name>.merge` config
+        // pointing at a ref that no longer resolves. That must not fail the whole
+        // branch list — the sidebar would go blank on a routine remote cleanup.
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        repo.git(&["config", "branch.main.remote", "origin"]);
+        repo.git(&["config", "branch.main.merge", "refs/heads/vanished"]);
+
+        let (ahead, behind) =
+            ahead_behind(repo.path(), "main", "origin/vanished").expect("must not error");
+
+        assert_eq!((ahead, behind), (0, 0));
+        assert!(list_branches(repo.path()).is_ok());
+    }
+
+    // -- Mutations -----------------------------------------------------------
+
+    #[test]
+    fn deleting_an_unmerged_branch_needs_force() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        checkout_new(repo.path(), "unmerged", None).expect("branch");
+        repo.commit("only-here.txt", "y", "Work only on this branch");
+        checkout(repo.path(), "main").expect("back to main");
+
+        delete_branch(repo.path(), "unmerged", false)
+            .expect_err("git must refuse to drop unmerged work without -D");
+        assert!(list_branches(repo.path())
+            .unwrap()
+            .iter()
+            .any(|b| b.name == "unmerged"));
+
+        delete_branch(repo.path(), "unmerged", true).expect("force delete");
+        assert!(!list_branches(repo.path())
+            .unwrap()
+            .iter()
+            .any(|b| b.name == "unmerged"));
+    }
+
+    #[test]
+    fn create_branch_starts_at_the_given_point() {
+        let repo = FixtureRepo::new();
+        let base = repo.commit("a.txt", "x", "First");
+        repo.commit("b.txt", "y", "Second");
+
+        create_branch(repo.path(), "from-base", Some(&base)).expect("create");
+
+        let branches = list_branches(repo.path()).expect("list");
+        let created = branches.iter().find(|b| b.name == "from-base").unwrap();
+        assert_eq!(
+            created.tip, base,
+            "the branch should point at the start point"
+        );
+    }
+
+    #[test]
+    fn a_conflicting_merge_surfaces_as_an_error() {
+        let repo = FixtureRepo::new();
+        repo.commit("conflict.txt", "base\n", "Base");
+
+        checkout_new(repo.path(), "other", None).expect("branch");
+        repo.write("conflict.txt", "from other\n");
+        repo.git(&["add", "conflict.txt"]);
+        repo.commit_all("Other side");
+
+        checkout(repo.path(), "main").expect("checkout");
+        repo.write("conflict.txt", "from main\n");
+        repo.git(&["add", "conflict.txt"]);
+        repo.commit_all("Main side");
+
+        let err = merge_branch(repo.path(), "other")
+            .expect_err("a conflicting merge must not be reported as success");
+        assert!(matches!(err, GitError::CommandFailed { .. }));
+    }
+
+    #[test]
+    fn rebase_replays_the_current_branch_onto_another() {
+        let repo = FixtureRepo::new();
+        repo.commit("base.txt", "base\n", "Base");
+
+        checkout_new(repo.path(), "feature", None).expect("branch");
+        repo.commit("feature.txt", "f\n", "Feature work");
+
+        checkout(repo.path(), "main").expect("checkout");
+        repo.commit("main.txt", "m\n", "Mainline work");
+
+        checkout(repo.path(), "feature").expect("checkout");
+        rebase_onto(repo.path(), "main").expect("rebase");
+
+        // After the replay the mainline commit is an ancestor, so the history is
+        // linear rather than a merge.
+        let log = repo.git(&["log", "--oneline"]);
+        assert!(log.contains("Mainline work"));
+        assert!(log.contains("Feature work"));
+        assert!(repo.file_path("main.txt").exists());
+    }
 }

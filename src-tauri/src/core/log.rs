@@ -504,6 +504,207 @@ mod tests {
         );
     }
 
+    #[test]
+    fn parse_log_ignores_empty_and_headless_records() {
+        assert!(parse_log("").is_empty());
+        assert!(parse_log("\n\n").is_empty());
+        // A record whose hash field is empty is not a commit — emitting a row for
+        // it would put a dot in the graph with nothing behind it.
+        assert!(parse_log("\0h\0A\0a@x.invalid\u{0}1\0\0\0subject\u{1e}").is_empty());
+    }
+
+    #[test]
+    fn parse_log_splits_every_ref_pointing_at_a_commit() {
+        let raw =
+            "abc\0abc\0A\0a@x.invalid\u{0}1\0\0HEAD -> main, origin/main, tag: v1.0.0\0release\u{1e}";
+
+        let commits = parse_log(raw);
+
+        assert_eq!(
+            commits[0].refs,
+            vec!["HEAD -> main", "origin/main", "tag: v1.0.0"]
+        );
+    }
+
+    #[test]
+    fn parse_log_tolerates_a_timestamp_it_cannot_read() {
+        // Better a commit at the epoch than a dropped row: a graph missing a
+        // commit is far more confusing than one with an odd date.
+        let raw = "abc\0abc\0A\0a@x.invalid\0not-a-number\0\0\0subject\u{1e}";
+
+        let commits = parse_log(raw);
+
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].timestamp, 0);
+    }
+
+    #[test]
+    fn parse_log_keeps_a_subject_containing_the_field_separator_class() {
+        // Tabs, quotes, backslashes and non-ASCII all pass through untouched —
+        // only NUL and the record separator are structural.
+        let subject = "feat(ui): add \"tabs\"\tand a \\backslash — with émoji 🐧";
+        let raw = format!("abc\0abc\0A\0a@x.invalid\u{0}1\0\0\0{subject}\u{1e}");
+
+        let commits = parse_log(&raw);
+
+        assert_eq!(commits[0].subject, subject);
+    }
+
+    // -- Lane layout invariants ---------------------------------------------
+
+    /// Every lane a row draws must sit inside the reported width, and each row's
+    /// incoming lanes must match the previous row's outgoing lanes — otherwise
+    /// the renderer draws lines that start nowhere or run off its viewport.
+    fn assert_layout_is_consistent(layout: &GraphLayout) {
+        for (i, row) in layout.rows.iter().enumerate() {
+            assert!(
+                row.lane < layout.lane_count,
+                "row {i} ({}) sits in lane {} but the graph is only {} wide",
+                row.hash,
+                row.lane,
+                layout.lane_count
+            );
+            for slot in row.incoming.iter().chain(&row.outgoing) {
+                assert!(slot.lane < layout.lane_count);
+            }
+            if i > 0 {
+                assert_eq!(
+                    row.incoming,
+                    layout.rows[i - 1].outgoing,
+                    "row {i} ({}) disagrees with the row above it about what lines are open",
+                    row.hash
+                );
+            }
+        }
+        assert!(
+            layout.rows.first().is_none_or(|r| r.incoming.is_empty()),
+            "nothing can arrive from above the first row"
+        );
+    }
+
+    #[test]
+    fn lanes_stay_consistent_across_a_gnarly_dag() {
+        // Two long-running side branches, a merge of a merge, and an orphan.
+        let commits = vec![
+            node("T", &["M2"]),
+            node("M2", &["M1", "S3"]),
+            node("M1", &["C", "F2"]),
+            node("C", &["B"]),
+            node("F2", &["F1"]),
+            node("S3", &["S2"]),
+            node("S2", &["S1"]),
+            node("F1", &["B"]),
+            node("S1", &["B"]),
+            node("B", &["A"]),
+            node("A", &[]),
+            node("ORPHAN", &[]),
+        ];
+
+        let layout = compute_lanes(&commits);
+
+        assert_layout_is_consistent(&layout);
+        assert_eq!(layout.rows.len(), commits.len());
+        assert_eq!(lane_of(&layout, "A"), 0, "the root belongs on the mainline");
+    }
+
+    #[test]
+    fn a_merge_whose_second_parent_is_already_open_does_not_open_a_second_lane() {
+        // `X` is already being descended toward when `M` names it as a second
+        // parent. Opening another lane for it would draw two lines converging on
+        // one commit from the same direction.
+        let commits = vec![
+            node("T", &["X"]),
+            node("M", &["B", "X"]),
+            node("B", &["A"]),
+            node("X", &["A"]),
+            node("A", &[]),
+        ];
+
+        let layout = compute_lanes(&commits);
+
+        assert_layout_is_consistent(&layout);
+        let x = layout.rows.iter().find(|r| r.hash == "X").unwrap();
+        let lanes_targeting_x: Vec<usize> = layout
+            .rows
+            .iter()
+            .find(|r| r.hash == "M")
+            .unwrap()
+            .outgoing
+            .iter()
+            .filter(|s| s.target == "X")
+            .map(|s| s.lane)
+            .collect();
+        assert_eq!(
+            lanes_targeting_x.len(),
+            1,
+            "X should be reached by exactly one lane, got {lanes_targeting_x:?}"
+        );
+        assert_eq!(x.lane, lanes_targeting_x[0]);
+    }
+
+    #[test]
+    fn a_lone_root_commit_opens_and_closes_one_lane() {
+        let layout = compute_lanes(&[node("A", &[])]);
+
+        assert_eq!(layout.lane_count, 1);
+        assert_eq!(layout.rows[0].lane, 0);
+        assert!(layout.rows[0].incoming.is_empty());
+        assert!(
+            layout.rows[0].outgoing.is_empty(),
+            "a root has no parent to descend toward"
+        );
+    }
+
+    #[test]
+    fn merged_from_lists_only_the_side_lanes_not_the_commits_own() {
+        //   M          three branches converging on A
+        let commits = vec![
+            node("M", &["B", "C", "D"]),
+            node("B", &["A"]),
+            node("C", &["A"]),
+            node("D", &["A"]),
+            node("A", &[]),
+        ];
+
+        let layout = compute_lanes(&commits);
+        let a = layout.rows.iter().find(|r| r.hash == "A").unwrap();
+
+        assert!(
+            !a.merged_from.contains(&a.lane),
+            "a commit never merges into itself: lane {} appears in {:?}",
+            a.lane,
+            a.merged_from
+        );
+        assert_eq!(a.merged_from.len(), 2);
+    }
+
+    #[test]
+    fn the_graph_narrows_again_after_a_branch_closes() {
+        // A wide middle followed by a long linear tail must not leave the tail
+        // indented — that is the "endless rightward drift" the release step guards.
+        let mut commits = vec![
+            node("M", &["S1", "T1"]),
+            node("S1", &["BASE"]),
+            node("T1", &["BASE"]),
+            node("BASE", &["L1"]),
+        ];
+        for i in 1..5 {
+            commits.push(node(&format!("L{i}"), &[&format!("L{}", i + 1)]));
+        }
+        commits.push(node("L5", &[]));
+
+        let layout = compute_lanes(&commits);
+
+        assert_layout_is_consistent(&layout);
+        for tail in ["L1", "L2", "L3", "L4", "L5"] {
+            assert_eq!(
+                lane_of(&layout, tail),
+                0,
+                "{tail} drifted off the mainline after the branch closed"
+            );
+        }
+    }
+
     // -- Against a real repository ------------------------------------------
 
     #[test]

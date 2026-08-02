@@ -167,6 +167,101 @@ mod tests {
     }
 
     #[test]
+    fn merge_and_rebase_state_files_are_tracked() {
+        // These appear and vanish around a conflicted merge or an interactive
+        // rebase — exactly the moments the UI most needs to redraw.
+        let git_dir = Path::new("/repo/.git");
+
+        assert!(is_relevant_path(
+            Path::new("/repo/.git/MERGE_HEAD"),
+            git_dir
+        ));
+        assert!(is_relevant_path(
+            Path::new("/repo/.git/REBASE_HEAD"),
+            git_dir
+        ));
+        assert!(is_relevant_path(
+            Path::new("/repo/.git/packed-refs"),
+            git_dir
+        ));
+        assert!(is_relevant_path(
+            Path::new("/repo/.git/refs/tags/v1.0.0"),
+            git_dir
+        ));
+    }
+
+    #[test]
+    fn internal_git_bookkeeping_is_ignored() {
+        // Anything not explicitly listed is treated as noise. Refreshing on
+        // config writes or hook edits would fire constantly for no visible change,
+        // and the refresh itself can touch the repo — a loop that never settles.
+        let git_dir = Path::new("/repo/.git");
+
+        for noise in [
+            "/repo/.git/config",
+            "/repo/.git/COMMIT_EDITMSG",
+            "/repo/.git/hooks/pre-commit",
+            "/repo/.git/info/exclude",
+            "/repo/.git/modules/sub/HEAD",
+            "/repo/.git/refs/heads/main.lock",
+            "/repo/.git/ORIG_HEAD",
+        ] {
+            assert!(
+                !is_relevant_path(Path::new(noise), git_dir),
+                "{noise} should not trigger a refresh"
+            );
+        }
+    }
+
+    #[test]
+    fn lock_files_are_ignored_wherever_they_appear() {
+        let git_dir = Path::new("/repo/.git");
+
+        assert!(!is_relevant_path(
+            Path::new("/repo/.git/HEAD.lock"),
+            git_dir
+        ));
+        assert!(
+            !is_relevant_path(Path::new("/repo/src/build.lock"), git_dir),
+            "a lock file in the worktree is churn too"
+        );
+    }
+
+    #[test]
+    fn an_event_is_relevant_if_any_of_its_paths_is() {
+        // A rename event carries both the source and the destination; ignoring it
+        // because the first path was a lock file would drop the real change.
+        let git_dir = Path::new("/repo/.git");
+        let noise_only = Event::default().add_path(PathBuf::from("/repo/.git/index.lock"));
+        let mixed = Event::default()
+            .add_path(PathBuf::from("/repo/.git/index.lock"))
+            .add_path(PathBuf::from("/repo/.git/index"));
+
+        assert!(!is_relevant(&noise_only, git_dir));
+        assert!(is_relevant(&mixed, git_dir));
+        assert!(
+            !is_relevant(&Event::default(), git_dir),
+            "an event with no paths tells us nothing"
+        );
+    }
+
+    #[test]
+    fn a_repo_nested_inside_another_is_matched_by_its_own_git_dir() {
+        // `strip_prefix` is what separates "inside .git" from "in the worktree";
+        // a path merely *containing* `.git` as text must not be misread.
+        let git_dir = Path::new("/repo/.git");
+
+        assert!(
+            is_relevant_path(Path::new("/repo/docs/.gitignore"), git_dir),
+            "a worktree file whose name starts with .git is still a worktree file"
+        );
+        assert!(
+            is_relevant_path(Path::new("/other-repo/.git/objects/ab/cd"), git_dir),
+            "a different repository's internals are outside this one's .git"
+        );
+    }
+
+    #[test]
     fn a_commit_produces_exactly_one_debounced_callback() {
         let repo = FixtureRepo::new();
         repo.commit("seed.txt", "x", "Initial commit");

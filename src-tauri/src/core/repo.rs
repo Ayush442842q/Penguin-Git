@@ -180,4 +180,113 @@ mod tests {
         app.remove(&state.id);
         assert!(app.get(&state.id).is_none());
     }
+
+    #[test]
+    fn app_state_holds_several_repos_at_once_sorted_by_name() {
+        // Phase 1's UI opens one repo, but the state is deliberately shaped for
+        // many — this is the behaviour Phase 3 will depend on.
+        let first = FixtureRepo::new();
+        first.commit("a.txt", "x", "Initial commit");
+        let second = FixtureRepo::new();
+        second.commit("a.txt", "x", "Initial commit");
+
+        let app = AppState::new();
+        app.insert(open_repo(first.path()).expect("open first"));
+        app.insert(open_repo(second.path()).expect("open second"));
+
+        let listed = app.list();
+        assert_eq!(listed.len(), 2, "two distinct repos must not collapse");
+        let mut names: Vec<&str> = listed.iter().map(|s| s.name.as_str()).collect();
+        let sorted = {
+            let mut copy = names.clone();
+            copy.sort_unstable();
+            copy
+        };
+        names.sort_unstable();
+        assert_eq!(names, sorted, "list() returns repos in name order");
+    }
+
+    #[test]
+    fn removing_one_repo_leaves_the_others_open() {
+        let first = FixtureRepo::new();
+        first.commit("a.txt", "x", "Initial commit");
+        let second = FixtureRepo::new();
+        second.commit("a.txt", "x", "Initial commit");
+
+        let app = AppState::new();
+        let a = open_repo(first.path()).expect("open");
+        let b = open_repo(second.path()).expect("open");
+        app.insert(a.clone());
+        app.insert(b.clone());
+
+        app.remove(&a.id);
+
+        assert!(app.get(&a.id).is_none());
+        assert!(app.get(&b.id).is_some());
+        assert_eq!(app.list().len(), 1);
+    }
+
+    #[test]
+    fn get_on_an_unknown_id_is_none_rather_than_a_panic() {
+        let app = AppState::new();
+        assert!(app.get(&RepoId("/nowhere".to_string())).is_none());
+        // Removing something that was never inserted must also be harmless.
+        app.remove(&RepoId("/nowhere".to_string()));
+        assert!(app.list().is_empty());
+    }
+
+    #[test]
+    fn repo_id_is_the_canonical_worktree_root() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+
+        let state = open_repo(repo.path()).expect("open");
+
+        assert_eq!(state.id.as_str(), state.path.to_string_lossy());
+        assert!(
+            state.path.join(".git").exists(),
+            "the id must name the worktree root, not a subdirectory"
+        );
+    }
+
+    #[test]
+    fn open_repo_reports_the_branch_after_a_switch() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+        repo.git(&["checkout", "-b", "feature/login"]);
+
+        let state = open_repo(repo.path()).expect("open");
+
+        assert_eq!(state.head_branch.as_deref(), Some("feature/login"));
+        assert_eq!(
+            head_branch(repo.path()).expect("head branch"),
+            Some("feature/login".to_string())
+        );
+    }
+
+    #[test]
+    fn open_repo_works_on_a_repository_with_no_commits() {
+        // A freshly `git init`-ed directory is a perfectly valid thing to open,
+        // and it is the first thing a user does when starting a new project.
+        let repo = FixtureRepo::new();
+
+        let state = open_repo(repo.path()).expect("an empty repo must still open");
+
+        assert_eq!(
+            state.head_branch.as_deref(),
+            Some("main"),
+            "HEAD points at an unborn branch, which is still a branch name"
+        );
+    }
+
+    #[test]
+    fn open_repo_fails_rather_than_walking_up_out_of_a_temp_dir() {
+        // `rev-parse --show-toplevel` is what does the detecting; a plain
+        // directory must be rejected, not silently resolved to some ancestor.
+        let dir = tempfile::tempdir().expect("tempdir");
+        let nested = dir.path().join("deep/nested");
+        std::fs::create_dir_all(&nested).expect("mkdir");
+
+        assert!(open_repo(&nested).is_err());
+    }
 }

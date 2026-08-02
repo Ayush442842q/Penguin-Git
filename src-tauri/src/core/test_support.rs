@@ -44,7 +44,9 @@ impl FixtureRepo {
     /// `message`. Returns the resulting commit hash.
     pub fn commit(&self, relative_path: &str, contents: &str, message: &str) -> String {
         self.write(relative_path, contents);
-        run(self.dir.path(), &["add", relative_path]);
+        // `--` so a fixture can legitimately be named `-x.txt` or `--cached`;
+        // those are exactly the paths the option-injection tests need.
+        run(self.dir.path(), &["add", "--", relative_path]);
         self.commit_all(message)
     }
 
@@ -89,6 +91,15 @@ impl FixtureRepo {
         run(self.dir.path(), &["remote", "add", name, &url]);
         bare
     }
+}
+
+/// Runs a git command in any directory — a bare remote, a second clone, a
+/// plain temp dir — for tests that need to set up state outside the fixture.
+///
+/// Exists so `Command::new("git")` stays confined to this file and `exec.rs`;
+/// `no_module_spawns_git_outside_exec` enforces that.
+pub fn git_in(cwd: &Path, args: &[&str]) -> String {
+    run(cwd, args)
 }
 
 /// Runs a git command against `cwd` and panics on failure — test setup only,
