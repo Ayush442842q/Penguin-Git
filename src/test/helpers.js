@@ -5,10 +5,6 @@ export { makeBridgeMock, BRIDGE_FUNCTIONS } from "./bridgeMock";
 
 /**
  * Shared test fixtures and store setup.
- *
- * Every component reads from `useRepoStore` and calls through
- * `services/tauriBridge`, so tests need both stubbed the same way. Centralising
- * that here keeps each test file about the behaviour it is actually asserting.
  */
 
 export const REPO = { id: "/repo", path: "/repo", name: "repo", headBranch: "main" };
@@ -77,28 +73,66 @@ export const branch = (name, overrides = {}) => ({
 
 /** Resets the store to a known state, applying `overrides` on top. */
 export function setStore(overrides = {}) {
+  const repo = overrides.repo !== undefined ? overrides.repo : REPO;
+  const repoId = repo ? repo.id : null;
+
+  const currentRepos = useRepoStore.getState().repos || {};
+
+  const slice = repoId
+    ? {
+        repo,
+        status: overrides.status !== undefined ? overrides.status : CLEAN_STATUS,
+        commits: overrides.commits !== undefined ? overrides.commits : [],
+        layout: overrides.layout !== undefined ? overrides.layout : { rows: [], laneCount: 0 },
+        branches: overrides.branches !== undefined ? overrides.branches : [],
+        remotes: overrides.remotes !== undefined ? overrides.remotes : [],
+        stashes: overrides.stashes !== undefined ? overrides.stashes : [],
+        submodules: overrides.submodules !== undefined ? overrides.submodules : [],
+        operationState:
+          overrides.operationState !== undefined
+            ? overrides.operationState
+            : { kind: null, headName: null, onto: null, conflictedPaths: [] },
+        activeConflictPath:
+          overrides.activeConflictPath !== undefined ? overrides.activeConflictPath : null,
+        interactiveRebaseModal:
+          overrides.interactiveRebaseModal !== undefined ? overrides.interactiveRebaseModal : null,
+        selectedCommit: overrides.selectedCommit !== undefined ? overrides.selectedCommit : null,
+        selectedFile: overrides.selectedFile !== undefined ? overrides.selectedFile : null,
+      }
+    : null;
+
+  const repos = repoId ? { ...currentRepos, [repoId]: slice } : {};
+
   useRepoStore.setState({
-    repo: REPO,
-    status: CLEAN_STATUS,
-    commits: [],
-    layout: { rows: [], laneCount: 0 },
-    branches: [],
-    remotes: [],
-    stashes: [],
-    recentRepos: [],
-    loading: false,
-    error: null,
-    busy: false,
-    selectedCommit: null,
-    selectedFile: null,
-    ...overrides,
+    repos,
+    activeRepoId: repoId,
+    repo,
+    status: slice ? slice.status : null,
+    commits: slice ? slice.commits : [],
+    layout: slice ? slice.layout : { rows: [], laneCount: 0 },
+    branches: slice ? slice.branches : [],
+    remotes: slice ? slice.remotes : [],
+    stashes: slice ? slice.stashes : [],
+    submodules: slice ? slice.submodules : [],
+    operationState: slice
+      ? slice.operationState
+      : { kind: null, headName: null, onto: null, conflictedPaths: [] },
+    activeConflictPath: slice ? slice.activeConflictPath : null,
+    interactiveRebaseModal: slice ? slice.interactiveRebaseModal : null,
+    selectedCommit: slice ? slice.selectedCommit : null,
+    selectedFile: slice ? slice.selectedFile : null,
+    recentRepos: overrides.recentRepos !== undefined ? overrides.recentRepos : [],
+    loading: overrides.loading !== undefined ? overrides.loading : false,
+    error: overrides.error !== undefined ? overrides.error : null,
+    busy: overrides.busy !== undefined ? overrides.busy : false,
+    undoToast: overrides.undoToast !== undefined ? overrides.undoToast : null,
+    ...(overrides.run ? { run: overrides.run } : {}),
   });
 }
 
 /**
  * Captures the operation passed to `store.run(...)` instead of executing the
- * real one, so a test can assert *which* bridge call a button wires up without
- * needing the whole refresh cycle to resolve.
+ * real one, so a test can assert *which* bridge call a button wires up.
  */
 export function captureRunCalls() {
   const calls = [];

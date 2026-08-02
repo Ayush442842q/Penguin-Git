@@ -151,10 +151,12 @@ function RefBadge({ name }) {
 }
 
 export default function CommitGraph() {
-  const commits = useRepoStore((s) => s.commits);
-  const layout = useRepoStore((s) => s.layout);
-  const status = useRepoStore((s) => s.status);
-  const selectedCommit = useRepoStore((s) => s.selectedCommit);
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
+  const commits = slice?.commits || [];
+  const layout = slice?.layout || { rows: [], laneCount: 0 };
+  const status = slice?.status;
+  const selectedCommit = slice?.selectedCommit;
   const selectCommit = useRepoStore((s) => s.selectCommit);
   const run = useRepoStore((s) => s.run);
 
@@ -191,7 +193,10 @@ export default function CommitGraph() {
       outgoing: tipRow ? [{ lane: tipRow.lane, target: tipRow.hash }] : [],
       mergedFrom: [],
     };
-    const changeCount = status.staged.length + status.unstaged.length + status.untracked.length;
+    const changeCount =
+      (status.staged?.length || 0) +
+      (status.unstaged?.length || 0) +
+      (status.untracked?.length || 0);
 
     return [
       {

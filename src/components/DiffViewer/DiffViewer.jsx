@@ -145,9 +145,11 @@ function HistoryView({ commits, onSelect }) {
 }
 
 export default function DiffViewer() {
-  const repo = useRepoStore((s) => s.repo);
-  const selectedCommit = useRepoStore((s) => s.selectedCommit);
-  const selectedFile = useRepoStore((s) => s.selectedFile);
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
+  const repo = slice?.repo;
+  const selectedCommit = slice?.selectedCommit;
+  const selectedFile = slice?.selectedFile;
   const selectCommit = useRepoStore((s) => s.selectCommit);
 
   const [tab, setTab] = useState("diff");

@@ -4,7 +4,12 @@ import * as git from "../../services/tauriBridge";
 import "./ConflictEditor.css";
 
 export function ConflictEditor({ path }) {
-  const { repo, operationState, refresh, closeConflictEditor } = useRepoStore();
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
+  const repo = slice?.repo;
+  const operationState = slice?.operationState;
+  const refresh = useRepoStore((s) => s.refresh);
+  const closeConflictEditor = useRepoStore((s) => s.closeConflictEditor);
 
   const [stages, setStages] = useState({
     base: "",

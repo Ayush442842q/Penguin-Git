@@ -42,15 +42,48 @@ pub struct RepoState {
 ///
 /// The `Mutex<HashMap<..>>` shape is intentional groundwork for Phase 3; do not
 /// collapse it to a single `RepoState` just because Phase 1 only uses one entry.
-#[derive(Debug, Default)]
 pub struct AppState {
     repos: Mutex<HashMap<RepoId, RepoState>>,
     pub journal: crate::core::undo::ActionJournal,
+    pub registry: crate::core::repo_registry::RepoRegistry,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+fn default_db_path() -> PathBuf {
+    let base = std::env::var("HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| std::env::temp_dir());
+    base.join(".config").join("penguingit").join("penguingit.db")
 }
 
 impl AppState {
     pub fn new() -> Self {
-        Self::default()
+        let db_path = default_db_path();
+        let registry = crate::core::repo_registry::RepoRegistry::open(&db_path)
+            .unwrap_or_else(|_| {
+                crate::core::repo_registry::RepoRegistry::open_in_memory()
+                    .expect("in-memory sqlite db creation should never fail")
+            });
+        Self {
+            repos: Mutex::new(HashMap::new()),
+            journal: crate::core::undo::ActionJournal::new(),
+            registry,
+        }
+    }
+
+    pub fn with_in_memory_registry() -> Self {
+        let registry = crate::core::repo_registry::RepoRegistry::open_in_memory()
+            .expect("in-memory sqlite db creation should never fail");
+        Self {
+            repos: Mutex::new(HashMap::new()),
+            journal: crate::core::undo::ActionJournal::new(),
+            registry,
+        }
     }
 
     pub fn insert(&self, state: RepoState) {

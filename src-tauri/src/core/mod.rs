@@ -14,11 +14,14 @@ pub mod merge_state;
 pub mod rebase;
 pub mod remote;
 pub mod repo;
+pub mod repo_registry;
 pub mod stage;
 pub mod stash;
 pub mod status;
+pub mod submodule;
 pub mod undo;
 pub mod watcher;
+pub mod worktree;
 
 #[cfg(test)]
 pub mod round_trip_tests;

@@ -100,11 +100,30 @@ describe("tauriBridge", () => {
       ],
       ["pull", () => git.pull("/r"), "pull", { repoPath: "/r" }],
       ["getStashes", () => git.getStashes("/r"), "get_stashes", { repoPath: "/r" }],
+      ["listRecentRepos", () => git.listRecentRepos(), "list_recent_repos", undefined],
+      ["forgetRecentRepo", () => git.forgetRecentRepo("/r"), "forget_recent_repo", { id: "/r" }],
+      ["getSubmodules", () => git.getSubmodules("/r"), "get_submodules", { repoPath: "/r" }],
+      [
+        "initSubmodule",
+        () => git.initSubmodule("/r", "sub"),
+        "init_submodule",
+        { repoPath: "/r", submodulePath: "sub" },
+      ],
+      [
+        "updateSubmodule",
+        () => git.updateSubmodule("/r", "sub"),
+        "update_submodule",
+        { repoPath: "/r", submodulePath: "sub" },
+      ],
     ];
 
     it.each(cases)("%s", (_name, call, expectedCommand, expectedArgs) => {
       call();
-      expect(invoke).toHaveBeenCalledWith(expectedCommand, expectedArgs);
+      if (expectedArgs !== undefined) {
+        expect(invoke).toHaveBeenCalledWith(expectedCommand, expectedArgs);
+      } else {
+        expect(invoke).toHaveBeenCalledWith(expectedCommand);
+      }
     });
   });
 

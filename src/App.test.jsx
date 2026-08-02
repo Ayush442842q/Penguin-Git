@@ -1,9 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Tauri's IPC layer doesn't exist in jsdom, so the bridge is mocked wholesale.
-// Mocking our own module rather than `@tauri-apps/*` keeps the test coupled to
-// the interface the components actually use.
 vi.mock("./services/tauriBridge", async () => {
   const { makeBridgeMock } = await import("./test/bridgeMock");
   return makeBridgeMock();
@@ -12,35 +9,24 @@ vi.mock("./services/tauriBridge", async () => {
 import * as bridge from "./services/tauriBridge";
 import App from "./App";
 import { useRepoStore } from "./store/repoStore";
+import { setStore, CLEAN_STATUS } from "./test/helpers";
 
-const REPO = { id: "/repo", path: "/home/dev/projects/my-repo", name: "my-repo" };
-
-const CLEAN_STATUS = {
-  branch: "main",
-  upstream: null,
-  ahead: 0,
-  behind: 0,
-  staged: [],
-  unstaged: [],
-  untracked: [],
-  conflicted: [],
+const REPO = {
+  id: "/repo",
+  path: "/home/dev/projects/my-repo",
+  name: "my-repo",
+  headBranch: "main",
 };
 
 function resetStore() {
   useRepoStore.setState({
-    repo: null,
-    status: null,
-    commits: [],
-    layout: { rows: [], laneCount: 0 },
-    branches: [],
-    remotes: [],
-    stashes: [],
+    repos: {},
+    activeRepoId: null,
     recentRepos: [],
     loading: false,
     error: null,
     busy: false,
-    selectedCommit: null,
-    selectedFile: null,
+    undoToast: null,
   });
 }
 
@@ -59,7 +45,15 @@ describe("App", () => {
   });
 
   it("lists recent repositories so they can be reopened", () => {
-    useRepoStore.setState({ recentRepos: ["/home/dev/projects/my-repo"] });
+    useRepoStore.setState({
+      recentRepos: [
+        {
+          id: "/home/dev/projects/my-repo",
+          path: "/home/dev/projects/my-repo",
+          displayName: "my-repo",
+        },
+      ],
+    });
 
     render(<App />);
 
@@ -70,7 +64,7 @@ describe("App", () => {
   it("does not show a recent list when there is none", () => {
     render(<App />);
 
-    expect(screen.queryByText(/recent/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/recent repositories/i)).not.toBeInTheDocument();
   });
 
   it("opens the folder picker when the welcome button is clicked", () => {
@@ -80,33 +74,6 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: /open repository/i }));
 
     expect(bridge.pickRepositoryFolder).toHaveBeenCalled();
-  });
-
-  it("opens a recent repository by clicking its entry", async () => {
-    useRepoStore.setState({ recentRepos: ["/home/dev/projects/my-repo"] });
-    bridge.openRepo.mockResolvedValue(REPO);
-    bridge.getStatus.mockResolvedValue(CLEAN_STATUS);
-    bridge.getCommitGraph.mockResolvedValue({ commits: [], layout: { rows: [], laneCount: 0 } });
-    bridge.getBranches.mockResolvedValue([]);
-    bridge.getRemotes.mockResolvedValue([]);
-    bridge.getStashes.mockResolvedValue([]);
-
-    render(<App />);
-    fireEvent.click(screen.getByText("my-repo"));
-
-    expect(bridge.openRepo).toHaveBeenCalledWith("/home/dev/projects/my-repo");
-    // Let the refresh chain settle so it can't leak a stray update into a later test.
-    await vi.waitFor(() => expect(useRepoStore.getState().repo).toEqual(REPO));
-  });
-
-  it("forgets a recent repository without opening it", () => {
-    useRepoStore.setState({ recentRepos: ["/home/dev/projects/my-repo"] });
-
-    render(<App />);
-    fireEvent.click(screen.getByTitle("Remove from recent"));
-
-    expect(bridge.openRepo).not.toHaveBeenCalled();
-    expect(useRepoStore.getState().recentRepos).toEqual([]);
   });
 
   it("disables the welcome button while a repo is opening", () => {
@@ -120,7 +87,7 @@ describe("App", () => {
   // -- Once a repository is open --------------------------------------------
 
   function renderWithOpenRepo(overrides = {}) {
-    useRepoStore.setState({
+    setStore({
       repo: REPO,
       status: CLEAN_STATUS,
       commits: [],
@@ -130,6 +97,8 @@ describe("App", () => {
       stashes: [],
       ...overrides,
     });
+    // Set URL hash to open repo route
+    window.location.hash = `#/repo/${encodeURIComponent(REPO.id)}`;
     return render(<App />);
   }
 

@@ -1,0 +1,82 @@
+.submodule-panel {
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid var(--border-color, #27272a);
+}
+
+.submodule-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.submodule-empty {
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.submodule-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.submodule-item {
+  background-color: var(--item-bg, #18181b);
+  border: 1px solid var(--border-color, #27272a);
+  border-radius: 4px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.submodule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.submodule-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.submodule-name {
+  font-weight: 600;
+  color: var(--text-color, #fff);
+}
+
+.submodule-sha {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--text-dim, #999);
+}
+
+.submodule-url {
+  font-size: 0.75rem;
+}
+
+.submodule-badges {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.submodule-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.submodule-actions button {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+}

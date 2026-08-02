@@ -80,6 +80,13 @@ pub fn run() {
             // undo
             commands::undo::undo_last_action,
             commands::undo::get_undo_history,
+            // registry
+            commands::registry::list_recent_repos,
+            commands::registry::forget_recent_repo,
+            // submodule
+            commands::submodule::get_submodules,
+            commands::submodule::init_submodule,
+            commands::submodule::update_submodule,
         ])
         .run(tauri::generate_context!())
         .expect("error while running PenguinGit");

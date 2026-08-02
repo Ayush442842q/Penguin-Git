@@ -1,5 +1,8 @@
 import { useEffect } from "react";
+import { HashRouter, Routes, Route, useParams, useNavigate } from "react-router-dom";
 import { useRepoStore, subscribeToRepoChanges } from "./store/repoStore";
+import Launcher from "./components/Launcher/Launcher";
+import RepoTabs from "./components/RepoTabs/RepoTabs";
 import Sidebar from "./components/Sidebar/Sidebar";
 import CommitGraph from "./components/CommitGraph/CommitGraph";
 import DiffViewer from "./components/DiffViewer/DiffViewer";
@@ -9,86 +12,51 @@ import { RebaseDialog } from "./components/RebaseDialog/RebaseDialog";
 import { UndoToast } from "./components/UndoToast/UndoToast";
 import "./App.css";
 
-function WelcomeScreen() {
-  const openRepoViaPicker = useRepoStore((s) => s.openRepoViaPicker);
-  const openRepo = useRepoStore((s) => s.openRepo);
-  const forgetRecentRepo = useRepoStore((s) => s.forgetRecentRepo);
-  const recentRepos = useRepoStore((s) => s.recentRepos);
-  const loading = useRepoStore((s) => s.loading);
-
-  return (
-    <div className="welcome">
-      <h1 className="welcome-title">PenguinGit</h1>
-      <p className="welcome-tagline text-muted">
-        A premium, open-source Git GUI built exclusively for Linux.
-      </p>
-
-      <button className="primary welcome-open" disabled={loading} onClick={openRepoViaPicker}>
-        Open Repository…
-      </button>
-
-      {recentRepos.length > 0 && (
-        <div className="welcome-recent">
-          <span className="section-label">Recent</span>
-          <ul>
-            {recentRepos.map((path) => (
-              <li key={path}>
-                <button className="ghost truncate" title={path} onClick={() => openRepo(path)}>
-                  {path.split("/").pop()}
-                  <span className="text-dim welcome-recent-path truncate">{path}</span>
-                </button>
-                <button
-                  className="ghost"
-                  title="Remove from recent"
-                  onClick={() => forgetRecentRepo(path)}
-                >
-                  ⨯
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function Header() {
-  const repo = useRepoStore((s) => s.repo);
-  const status = useRepoStore((s) => s.status);
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
   const busy = useRepoStore((s) => s.busy);
   const openRepoViaPicker = useRepoStore((s) => s.openRepoViaPicker);
   const closeRepo = useRepoStore((s) => s.closeRepo);
+
+  const status = slice?.status;
+  const repo = slice?.repo;
 
   return (
     <header className="app-header">
       <div className="app-header-left">
         <span className="app-brand">PenguinGit</span>
-        <span className="text-dim">/</span>
-        <span className="truncate" title={repo.path}>
-          {repo.name}
-        </span>
+        {repo && (
+          <>
+            <span className="text-dim">/</span>
+            <span className="truncate" title={repo.path}>
+              {repo.name}
+            </span>
+          </>
+        )}
         {status?.branch && <span className="badge badge-purple">{status.branch}</span>}
         {busy && <span className="text-dim">working…</span>}
       </div>
+
+      <RepoTabs />
+
       <div className="app-header-right">
-        {/* Disabled while a git operation is running: switching or closing the
-            repository mid-write leaves the UI describing one repo and the
-            operation finishing against another. */}
         <button className="ghost" disabled={busy} onClick={openRepoViaPicker}>
           Open…
         </button>
-        <button className="ghost" disabled={busy} onClick={closeRepo}>
-          Close
-        </button>
+        {repo && (
+          <button className="ghost" disabled={busy} onClick={() => closeRepo(repo.id)}>
+            Close
+          </button>
+        )}
       </div>
     </header>
   );
 }
 
 function StatusBar() {
-  const status = useRepoStore((s) => s.status);
-  const commits = useRepoStore((s) => s.commits);
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
   const error = useRepoStore((s) => s.error);
   const clearError = useRepoStore((s) => s.clearError);
 
@@ -100,6 +68,16 @@ function StatusBar() {
     );
   }
 
+  if (!slice) {
+    return (
+      <footer className="app-statusbar">
+        <span>PenguinGit Ready</span>
+      </footer>
+    );
+  }
+
+  const status = slice.status;
+  const commits = slice.commits || [];
   const changes = status
     ? status.staged.length + status.unstaged.length + status.untracked.length
     : 0;
@@ -117,22 +95,31 @@ function StatusBar() {
   );
 }
 
-export default function App() {
-  const repo = useRepoStore((s) => s.repo);
-  const operationState = useRepoStore((s) => s.operationState);
-  const activeConflictPath = useRepoStore((s) => s.activeConflictPath);
-  const interactiveRebaseModal = useRepoStore((s) => s.interactiveRebaseModal);
+function RepoView() {
+  const { repoId: encodedRepoId } = useParams();
+  const navigate = useNavigate();
+  const repoId = decodeURIComponent(encodedRepoId || "");
 
-  // Live updates come from the Rust filesystem watcher. There is deliberately
-  // no polling interval anywhere in this app.
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const setActiveRepoId = useRepoStore((s) => s.setActiveRepoId);
+  const slice = useRepoStore((s) => s.repos[repoId]);
+
   useEffect(() => {
-    const unlisten = subscribeToRepoChanges();
-    return () => {
-      unlisten.then((off) => off()).catch(() => {});
-    };
-  }, []);
+    if (repoId && activeRepoId !== repoId && slice) {
+      setActiveRepoId(repoId);
+    } else if (!slice && repoId) {
+      // If repo not found in open repos, redirect to Launcher
+      navigate("/");
+    }
+  }, [repoId, activeRepoId, slice, setActiveRepoId, navigate]);
 
-  if (!repo) return <WelcomeScreen />;
+  if (!slice || !slice.repo) {
+    return <Launcher />;
+  }
+
+  const operationState = slice.operationState;
+  const activeConflictPath = slice.activeConflictPath;
+  const interactiveRebaseModal = slice.interactiveRebaseModal;
 
   const hasConflict =
     activeConflictPath ||
@@ -167,5 +154,26 @@ export default function App() {
 
       <UndoToast />
     </div>
+  );
+}
+
+export default function App() {
+  const loadRecentRepos = useRepoStore((s) => s.loadRecentRepos);
+
+  useEffect(() => {
+    loadRecentRepos();
+    const unlisten = subscribeToRepoChanges();
+    return () => {
+      unlisten.then((off) => off()).catch(() => {});
+    };
+  }, [loadRecentRepos]);
+
+  return (
+    <HashRouter>
+      <Routes>
+        <Route path="/" element={<Launcher />} />
+        <Route path="/repo/:repoId" element={<RepoView />} />
+      </Routes>
+    </HashRouter>
   );
 }

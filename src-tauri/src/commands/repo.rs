@@ -4,9 +4,10 @@ use tauri::{AppHandle, Emitter, State};
 
 use super::to_ipc_error;
 use crate::core::repo::{open_repo as core_open_repo, AppState, RepoId, RepoState};
+use crate::core::repo_registry::RegisteredRepo;
 use crate::core::watcher::{RepoChanged, RepoWatcher, REPO_CHANGED_EVENT};
 
-/// Opens a repository, caches its state, and starts watching it for changes.
+/// Opens a repository, caches its state, registers it in SQLite, and starts watching it.
 #[tauri::command]
 pub fn open_repo(
     path: String,
@@ -17,6 +18,22 @@ pub fn open_repo(
     let repo = core_open_repo(Path::new(&path)).map_err(to_ipc_error)?;
     state.insert(repo.clone());
     watchers.watch(&repo, app);
+
+    let now_str = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs().to_string())
+        .unwrap_or_default();
+
+    let reg_repo = RegisteredRepo {
+        id: repo.id.0.clone(),
+        path: repo.path.to_string_lossy().to_string(),
+        display_name: repo.name.clone(),
+        last_opened_at: now_str,
+        kind: "plain".to_string(),
+        primary_repo_id: None,
+    };
+    let _ = state.registry.upsert_repo(&reg_repo);
+
     Ok(repo)
 }
 

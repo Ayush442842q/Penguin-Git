@@ -4,7 +4,11 @@ import * as git from "../../services/tauriBridge";
 import "./RebaseDialog.css";
 
 export function RebaseDialog({ baseRef, initialCommits = [] }) {
-  const { repo, refresh, closeInteractiveRebase } = useRepoStore();
+  const activeRepoId = useRepoStore((s) => s.activeRepoId);
+  const slice = useRepoStore((s) => s.repos[activeRepoId]);
+  const repo = slice?.repo;
+  const refresh = useRepoStore((s) => s.refresh);
+  const closeInteractiveRebase = useRepoStore((s) => s.closeInteractiveRebase);
 
   const [todoItems, setTodoItems] = useState(
     initialCommits.map((c) => ({

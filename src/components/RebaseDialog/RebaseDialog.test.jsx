@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RebaseDialog } from "./RebaseDialog";
-import { useRepoStore } from "../../store/repoStore";
+import { setStore } from "../../test/helpers";
 import * as git from "../../services/tauriBridge";
 
 vi.mock("../../services/tauriBridge", () => ({
@@ -9,6 +9,7 @@ vi.mock("../../services/tauriBridge", () => ({
 }));
 
 describe("RebaseDialog Component", () => {
+  const MOCK_REPO = { id: "/mock/repo", path: "/mock/repo", name: "repo", headBranch: "main" };
   const initialCommits = [
     { hash: "abc1234", subject: "Commit 1" },
     { hash: "def5678", subject: "Commit 2" },
@@ -16,9 +17,7 @@ describe("RebaseDialog Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    useRepoStore.setState({
-      repo: { id: "/mock/repo", path: "/mock/repo" },
-    });
+    setStore({ repo: MOCK_REPO });
   });
 
   it("renders list of commits with action selectors", () => {

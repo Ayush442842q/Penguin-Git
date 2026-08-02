@@ -11,11 +11,13 @@ pub mod conflict;
 pub mod diff;
 pub mod log;
 pub mod rebase;
+pub mod registry;
 pub mod remote;
 pub mod repo;
 pub mod stage;
 pub mod stash;
 pub mod status;
+pub mod submodule;
 pub mod undo;
 
 use crate::core::GitError;
