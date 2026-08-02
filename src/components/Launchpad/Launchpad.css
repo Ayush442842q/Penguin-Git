@@ -1,0 +1,351 @@
+.launchpad-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.launchpad-modal {
+  background: var(--color-bg, #0d1117);
+  border: 1px solid var(--color-border, #30363d);
+  border-radius: 12px;
+  width: 90vw;
+  max-width: 1100px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.launchpad-page {
+  padding: 1.5rem;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.launchpad-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.launchpad-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-border, #30363d);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.launchpad-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.launchpad-header-left h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--color-fg, #e1e4e8);
+}
+
+.launchpad-repo-badge {
+  background: var(--color-bg-subtle, #161b22);
+  border: 1px solid var(--color-border, #30363d);
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  color: var(--color-fg-dim, #8b949e);
+}
+
+.launchpad-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.launchpad-close-btn {
+  background: none;
+  border: none;
+  color: var(--color-fg-dim, #8b949e);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.launchpad-close-btn:hover {
+  color: var(--color-fg, #ffffff);
+}
+
+.launchpad-toast {
+  margin: 0.5rem 1.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.launchpad-toast.success {
+  background: rgba(46, 160, 67, 0.2);
+  border: 1px solid rgba(46, 160, 67, 0.5);
+  color: #3fb950;
+}
+
+.launchpad-toast.error {
+  background: rgba(248, 81, 73, 0.2);
+  border: 1px solid rgba(248, 81, 73, 0.5);
+  color: #f85149;
+}
+
+.launchpad-banner {
+  margin: 0.5rem 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.launchpad-banner.warning {
+  background: rgba(210, 153, 34, 0.15);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  color: #d29922;
+}
+
+.launchpad-banner.error {
+  background: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  color: #f85149;
+}
+
+.launchpad-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .launchpad-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.launchpad-category {
+  background: var(--color-bg-subtle, #161b22);
+  border: 1px solid var(--color-border, #30363d);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.category-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-fg, #e1e4e8);
+}
+
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.empty-state {
+  font-size: 0.8rem;
+  color: var(--color-fg-dim, #8b949e);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+.item-card {
+  background: var(--color-bg, #0d1117);
+  border: 1px solid var(--color-border, #30363d);
+  border-radius: 6px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.2s ease;
+}
+
+.item-card:hover {
+  border-color: #58a6ff;
+}
+
+.item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kind-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.kind-badge.pr {
+  background: rgba(163, 113, 247, 0.2);
+  color: #a371f7;
+}
+
+.kind-badge.issue {
+  background: rgba(46, 160, 67, 0.2);
+  color: #3fb950;
+}
+
+.item-number {
+  font-size: 0.8rem;
+  color: var(--color-fg-dim, #8b949e);
+  font-family: var(--font-mono, monospace);
+}
+
+.item-title-link {
+  color: var(--color-fg, #58a6ff);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-title-link:hover {
+  text-decoration: underline;
+}
+
+.item-meta {
+  font-size: 0.75rem;
+  color: var(--color-fg-dim, #8b949e);
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-start-work {
+  background: rgba(88, 166, 255, 0.15);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  color: #58a6ff;
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: all 0.2s ease;
+}
+
+.btn-start-work:hover:not(:disabled) {
+  background: #1f6feb;
+  color: #ffffff;
+  border-color: #1f6feb;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.create-pr-modal {
+  background: var(--color-bg, #0d1117);
+  border: 1px solid var(--color-border, #30363d);
+  border-radius: 10px;
+  width: 500px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+}
+
+.create-pr-modal .modal-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border, #30363d);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.create-pr-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--color-fg, #e1e4e8);
+}
+
+.create-pr-modal .close-btn {
+  background: none;
+  border: none;
+  color: var(--color-fg-dim, #8b949e);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.create-pr-modal .modal-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.create-pr-modal .form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.create-pr-modal .form-row .form-group {
+  flex: 1;
+}
+
+.create-pr-modal .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.create-pr-modal label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-fg, #c9d1d9);
+}
+
+.launchpad-input,
+.launchpad-select,
+.launchpad-textarea {
+  background: var(--color-bg-subtle, #161b22);
+  border: 1px solid var(--color-border, #30363d);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  color: var(--color-fg, #c9d1d9);
+  font-size: 0.875rem;
+}
+
+.launchpad-textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.create-pr-modal .modal-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--color-border, #30363d);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
