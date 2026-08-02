@@ -56,6 +56,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             axum::routing::post(routes::patches::add_comment)
                 .get(routes::patches::list_comments),
         )
+        .route(
+            "/api/workspaces",
+            axum::routing::post(routes::workspaces::create_workspace)
+                .get(routes::workspaces::list_workspaces),
+        )
+        .route(
+            "/api/workspaces/:id",
+            axum::routing::get(routes::workspaces::get_workspace),
+        )
+        .route(
+            "/api/workspaces/:id/members",
+            axum::routing::post(routes::workspaces::add_member),
+        )
+        .route(
+            "/api/workspaces/:id/members/:user_id",
+            axum::routing::delete(routes::workspaces::remove_member),
+        )
+        .route(
+            "/api/workspaces/:id/repos",
+            axum::routing::post(routes::workspaces::add_repo),
+        )
+        .route(
+            "/api/workspaces/:id/repos/:repo_name",
+            axum::routing::delete(routes::workspaces::remove_repo),
+        )
         .layer(cors)
         .with_state(state);
 
