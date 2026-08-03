@@ -32,7 +32,14 @@ fn truncate_diff_if_needed(diff: &str) -> String {
     if diff.len() <= MAX_DIFF_BYTES {
         diff.to_string()
     } else {
-        let truncated = &diff[..MAX_DIFF_BYTES];
+        // `diff` routinely contains multi-byte UTF-8 (names, non-English
+        // comments, emoji) — slicing at a raw byte index panics if it lands
+        // mid-character, so walk back to the nearest real char boundary.
+        let mut cut = MAX_DIFF_BYTES;
+        while cut > 0 && !diff.is_char_boundary(cut) {
+            cut -= 1;
+        }
+        let truncated = &diff[..cut];
         format!(
             "{truncated}\n\n[Diff truncated due to size limits. Total length was {} bytes]",
             diff.len()
@@ -156,5 +163,43 @@ pub async fn ai_generate_pr_description(
             title: format!("PR: {branch} into {target}"),
             body: response_text.trim().to_string(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn truncate_diff_leaves_short_diffs_untouched() {
+        let diff = "a".repeat(100);
+        assert_eq!(truncate_diff_if_needed(&diff), diff);
+    }
+
+    #[test]
+    fn truncate_diff_does_not_panic_on_a_multi_byte_char_at_the_cutoff() {
+        // A 2-byte UTF-8 character straddling the exact MAX_DIFF_BYTES
+        // boundary used to panic ("byte index is not a char boundary")
+        // instead of truncating.
+        let mut diff = "a".repeat(MAX_DIFF_BYTES - 1);
+        diff.push('é');
+        diff.push_str("\nrest of the diff content that should be dropped\n");
+
+        let result = truncate_diff_if_needed(&diff);
+
+        assert!(result.contains("Diff truncated due to size limits"));
+        assert!(!result.contains("rest of the diff content"));
+    }
+
+    #[test]
+    fn truncate_diff_reports_the_real_original_length() {
+        let mut diff = "a".repeat(MAX_DIFF_BYTES - 1);
+        diff.push('é');
+        diff.push_str("\nmore\n");
+        let original_len = diff.len();
+
+        let result = truncate_diff_if_needed(&diff);
+
+        assert!(result.contains(&format!("Total length was {original_len} bytes")));
     }
 }

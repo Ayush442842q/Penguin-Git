@@ -392,7 +392,7 @@ function ItemCard({ item, onStartWork, isStartingWork }) {
             opened by <strong>@{item.author}</strong>
           </span>
           <span>·</span>
-          <span>updated {new Date(item.updated_at).toLocaleDateString()}</span>
+          <span>updated {new Date(item.updatedAt).toLocaleDateString()}</span>
         </div>
       </div>
 

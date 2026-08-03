@@ -37,7 +37,7 @@ describe("Launchpad Component", () => {
         repo: "Ayush442842q/PenguinGit",
         url: "https://github.com/Ayush442842q/PenguinGit/pull/10",
         category: "Needs review",
-        updated_at: "2026-08-02T10:00:00Z",
+        updatedAt: "2026-08-02T10:00:00Z",
         author: "alice",
         state: "open",
       },
@@ -48,7 +48,7 @@ describe("Launchpad Component", () => {
         repo: "Ayush442842q/PenguinGit",
         url: "https://github.com/Ayush442842q/PenguinGit/pull/11",
         category: "Your PRs",
-        updated_at: "2026-08-02T11:00:00Z",
+        updatedAt: "2026-08-02T11:00:00Z",
         author: "bob",
         state: "open",
       },
@@ -59,7 +59,7 @@ describe("Launchpad Component", () => {
         repo: "Ayush442842q/PenguinGit",
         url: "https://github.com/Ayush442842q/PenguinGit/pull/12",
         category: "Ready to merge",
-        updated_at: "2026-08-02T12:00:00Z",
+        updatedAt: "2026-08-02T12:00:00Z",
         author: "bob",
         state: "open",
       },
@@ -70,7 +70,7 @@ describe("Launchpad Component", () => {
         repo: "Ayush442842q/PenguinGit",
         url: "https://github.com/Ayush442842q/PenguinGit/issues/123",
         category: "Issues",
-        updated_at: "2026-08-02T13:00:00Z",
+        updatedAt: "2026-08-02T13:00:00Z",
         author: "charlie",
         state: "open",
       },
@@ -90,6 +90,14 @@ describe("Launchpad Component", () => {
       expect(screen.getByText("My Feature PR")).toBeInTheDocument();
       expect(screen.getByText("Approved PR")).toBeInTheDocument();
       expect(screen.getByText("Fix login crash")).toBeInTheDocument();
+      // Guards against the backend camelCasing `updatedAt` while the UI reads
+      // `updated_at` (or vice versa) — that mismatch renders "Invalid Date"
+      // instead of throwing, so it needs an explicit assertion to catch.
+      expect(
+        screen.getAllByText(`updated ${new Date("2026-08-02T10:00:00Z").toLocaleDateString()}`)
+          .length
+      ).toBeGreaterThan(0);
+      expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
     });
   });
 
