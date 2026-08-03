@@ -151,7 +151,7 @@ function RefBadge({ name }) {
   return <span className={`badge ${tone}`}>{label}</span>;
 }
 
-export default function CommitGraph() {
+export default function CommitGraph({ style }) {
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const slice = useRepoStore((s) => s.repos[activeRepoId]);
   const commits = slice?.commits || [];
@@ -248,7 +248,7 @@ export default function CommitGraph() {
   );
 
   return (
-    <div className="commit-graph panel">
+    <div className="commit-graph panel" style={style}>
       <div className="panel-header">
         <span className="section-label">Commit Graph</span>
         <input
