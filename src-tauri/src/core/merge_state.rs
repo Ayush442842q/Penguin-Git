@@ -158,7 +158,10 @@ mod tests {
             conflicted_paths: vec!["a.txt".to_string()],
         };
         let json = serde_json::to_value(&state).unwrap();
-        assert!(json.get("headName").is_some(), "expected headName, got: {json}");
+        assert!(
+            json.get("headName").is_some(),
+            "expected headName, got: {json}"
+        );
         assert!(
             json.get("conflictedPaths").is_some(),
             "expected conflictedPaths, got: {json}"
