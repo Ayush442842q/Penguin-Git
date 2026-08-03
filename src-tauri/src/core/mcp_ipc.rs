@@ -1,10 +1,12 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use rmcp::ServiceExt;
 use tauri::{AppHandle, Emitter};
-use tokio::io::AsyncBufReadExt;
+use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 use tokio::net::UnixListener;
 
 use crate::core::mcp_event::{get_event_bus, McpMutationEvent, UNIX_SOCKET_PATH};
+use crate::core::mcp_server::PenguinMcpServer;
 
 pub static EMBEDDED_MCP_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -34,7 +36,7 @@ pub fn start_mcp_event_listeners(app_handle: AppHandle) {
         }
     });
 
-    // 2. Standalone IPC over Unix domain socket
+    // 2. Standalone IPC / Embedded MCP Server over Unix domain socket
     let app_socket = Arc::clone(&app);
     tokio::spawn(async move {
         // Clean up any existing socket file from previous runs
@@ -48,8 +50,19 @@ pub fn start_mcp_event_listeners(app_handle: AppHandle) {
                         let mut reader = tokio::io::BufReader::new(stream);
                         let mut line = String::new();
                         if reader.read_line(&mut line).await.is_ok() && !line.trim().is_empty() {
-                            if let Ok(event) = serde_json::from_str::<McpMutationEvent>(&line) {
-                                emit_mcp_event(&app_conn, &event.tool, &event.repo_path);
+                            if !line.contains("\"jsonrpc\"") {
+                                if let Ok(event) = serde_json::from_str::<McpMutationEvent>(&line) {
+                                    emit_mcp_event(&app_conn, &event.tool, &event.repo_path);
+                                    return;
+                                }
+                            }
+
+                            if is_embedded_enabled() {
+                                let stream = reader.into_inner();
+                                let (read_half, write_half) = stream.into_split();
+                                let chained_read = std::io::Cursor::new(line.into_bytes()).chain(read_half);
+                                let server = PenguinMcpServer::new();
+                                let _ = server.serve((chained_read, write_half)).await;
                             }
                         }
                     });

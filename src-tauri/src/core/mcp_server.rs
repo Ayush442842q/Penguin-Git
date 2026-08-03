@@ -7,7 +7,7 @@ use rmcp::{
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-use penguingit_lib::core::{branch, commit, diff, log, mcp_event, remote, stage, stash, status};
+use crate::core::{branch, commit, diff, log, mcp_event, remote, stage, stash, status};
 
 #[derive(Debug, Clone)]
 pub struct PenguinMcpServer {
@@ -361,3 +361,48 @@ impl PenguinMcpServer {
         Ok(format!("Discarded changes to '{}'", args.file_path))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::mcp_ipc;
+    use crate::core::test_support::FixtureRepo;
+
+    #[test]
+    fn test_mcp_embedded_toggle_state() {
+        assert!(!mcp_ipc::is_embedded_enabled());
+        mcp_ipc::set_embedded_enabled(true);
+        assert!(mcp_ipc::is_embedded_enabled());
+        mcp_ipc::set_embedded_enabled(false);
+        assert!(!mcp_ipc::is_embedded_enabled());
+    }
+
+    #[tokio::test]
+    async fn test_mcp_server_git_status_and_log() {
+        let fixture = FixtureRepo::new();
+        fixture.commit("file.txt", "hello", "initial commit");
+
+        let server = PenguinMcpServer::new();
+        let status_res = server
+            .git_status(Parameters(GitStatusArgs {
+                repo_path: fixture.path().to_string_lossy().to_string(),
+            }))
+            .await;
+
+        assert!(status_res.is_ok());
+        let status_json = status_res.unwrap();
+        assert!(status_json.contains("\"branch\""));
+
+        let log_res = server
+            .git_log(Parameters(GitLogArgs {
+                repo_path: fixture.path().to_string_lossy().to_string(),
+                limit: Some(10),
+            }))
+            .await;
+
+        assert!(log_res.is_ok());
+        let log_json = log_res.unwrap();
+        assert!(log_json.contains("initial commit"));
+    }
+}
+

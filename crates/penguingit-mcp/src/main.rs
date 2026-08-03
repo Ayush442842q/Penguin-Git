@@ -1,7 +1,5 @@
-pub mod server;
-
+use penguingit_lib::core::mcp_server::PenguinMcpServer;
 use rmcp::ServiceExt;
-use server::PenguinMcpServer;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
