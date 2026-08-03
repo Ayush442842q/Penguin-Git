@@ -2,6 +2,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use super::branch::reject_option_like;
 use super::exec::{run_git, GitError};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,21 +53,26 @@ pub fn list_remotes(repo_path: &Path) -> Result<Vec<Remote>, GitError> {
 }
 
 pub fn add_remote(repo_path: &Path, name: &str, url: &str) -> Result<(), GitError> {
+    reject_option_like(name)?;
     run_git(repo_path, &["remote", "add", name, url])?;
     Ok(())
 }
 
 pub fn remove_remote(repo_path: &Path, name: &str) -> Result<(), GitError> {
+    reject_option_like(name)?;
     run_git(repo_path, &["remote", "remove", name])?;
     Ok(())
 }
 
 pub fn rename_remote(repo_path: &Path, old: &str, new: &str) -> Result<(), GitError> {
+    reject_option_like(old)?;
+    reject_option_like(new)?;
     run_git(repo_path, &["remote", "rename", old, new])?;
     Ok(())
 }
 
 pub fn set_remote_url(repo_path: &Path, name: &str, url: &str) -> Result<(), GitError> {
+    reject_option_like(name)?;
     run_git(repo_path, &["remote", "set-url", name, url])?;
     Ok(())
 }
@@ -77,7 +83,10 @@ pub fn set_remote_url(repo_path: &Path, name: &str, url: &str) -> Result<(), Git
 /// which otherwise linger in the branch list forever.
 pub fn fetch(repo_path: &Path, remote: Option<&str>) -> Result<(), GitError> {
     match remote {
-        Some(remote) => run_git(repo_path, &["fetch", "--prune", remote])?,
+        Some(remote) => {
+            reject_option_like(remote)?;
+            run_git(repo_path, &["fetch", "--prune", remote])?
+        }
         None => run_git(repo_path, &["fetch", "--prune", "--all"])?,
     };
     Ok(())
@@ -455,5 +464,27 @@ mod tests {
         let origin = get_repo_origin(repo.path()).expect("get_repo_origin");
         assert_eq!(origin.owner, "Ayush442842q");
         assert_eq!(origin.repo, "PenguinGit");
+    }
+
+    #[test]
+    fn remote_operations_refuse_option_like_names() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "x", "Initial commit");
+
+        assert!(add_remote(repo.path(), "--upload-pack=x", "https://example.com/x.git").is_err());
+        assert!(add_remote(repo.path(), "origin", "https://example.com/x.git").is_ok());
+
+        assert!(rename_remote(repo.path(), "-f", "renamed").is_err());
+        assert!(rename_remote(repo.path(), "origin", "--mirror").is_err());
+        rename_remote(repo.path(), "origin", "upstream").expect("rename should succeed");
+
+        assert!(set_remote_url(repo.path(), "--tags", "https://example.com/y.git").is_err());
+        set_remote_url(repo.path(), "upstream", "https://example.com/y.git")
+            .expect("set-url should succeed");
+
+        assert!(remove_remote(repo.path(), "-o").is_err());
+        remove_remote(repo.path(), "upstream").expect("remove should succeed");
+
+        assert!(fetch(repo.path(), Some("--upload-pack=x")).is_err());
     }
 }
