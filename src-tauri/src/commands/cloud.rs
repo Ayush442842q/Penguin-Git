@@ -36,6 +36,7 @@ pub async fn cloud_publish_patch(
     patch_data: String,
     repo_name: Option<String>,
     base_commit: Option<String>,
+    workspace_id: Option<String>,
 ) -> Result<CloudPatch, String> {
     let client = CloudClient::from_saved_config()?;
     client
@@ -45,6 +46,7 @@ pub async fn cloud_publish_patch(
             &patch_data,
             repo_name.as_deref(),
             base_commit.as_deref(),
+            workspace_id.as_deref(),
         )
         .await
 }

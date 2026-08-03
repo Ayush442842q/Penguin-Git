@@ -27,6 +27,7 @@ pub struct Token {
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Patch {
     pub id: Uuid,
+    pub workspace_id: Option<Uuid>,
     pub author_id: Uuid,
     pub title: String,
     pub description: Option<String>,

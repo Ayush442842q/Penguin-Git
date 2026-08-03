@@ -316,13 +316,21 @@ export const cloudLogout = () => invoke("cloud_logout");
 export const getCloudSettings = () => invoke("get_cloud_settings");
 export const saveCloudSettings = (serverUrl, token) =>
   invoke("save_cloud_settings", { serverUrl, token: token || null });
-export const cloudPublishPatch = (title, description, patchData, repoName, baseCommit) =>
+export const cloudPublishPatch = (
+  title,
+  description,
+  patchData,
+  repoName,
+  baseCommit,
+  workspaceId
+) =>
   invoke("cloud_publish_patch", {
     title,
     description: description || null,
     patchData,
     repoName: repoName || null,
     baseCommit: baseCommit || null,
+    workspaceId: workspaceId || null,
   });
 export const cloudListPatches = () => invoke("cloud_list_patches");
 export const cloudAddComment = (patchId, body) => invoke("cloud_add_comment", { patchId, body });
