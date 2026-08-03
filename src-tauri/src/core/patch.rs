@@ -9,6 +9,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use super::branch::reject_option_like;
 use super::exec::{run_git, run_git_raw_with_stdin, run_git_with_stdin, GitError};
 
 /// Metadata returned alongside exported patch content.
@@ -44,6 +45,7 @@ pub struct PatchPreview {
 pub fn export_patch(repo_path: &Path, commit_range: Option<&str>) -> Result<PatchExport, GitError> {
     match commit_range {
         Some(range) => {
+            reject_option_like(range)?;
             let content = run_git(repo_path, &["format-patch", "--stdout", range])?;
             let suggested = sanitize_filename(range);
             Ok(PatchExport {
@@ -234,5 +236,21 @@ mod tests {
         assert_eq!(sanitize_filename("HEAD~3..HEAD"), "HEAD_3__HEAD");
         assert_eq!(sanitize_filename("main"), "main");
         assert_eq!(sanitize_filename("v1.0..v2.0"), "v1_0__v2_0");
+    }
+
+    #[test]
+    fn export_patch_refuses_option_like_commit_range() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "v1\n", "First commit");
+        repo.commit("a.txt", "v2\n", "Second commit");
+
+        for range in ["--all", "-o", "--output-directory=/tmp", "-1"] {
+            let err = export_patch(repo.path(), Some(range))
+                .expect_err("option-like range must be rejected");
+            assert!(
+                err.to_string().contains("refusing to pass"),
+                "expected rejection error for range {range:?}, got: {err}"
+            );
+        }
     }
 }
