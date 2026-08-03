@@ -24,6 +24,7 @@ pub struct CloudUser {
 #[serde(rename_all = "camelCase")]
 pub struct CloudPatch {
     pub id: String,
+    pub workspace_id: Option<String>,
     pub author_id: String,
     pub title: String,
     pub description: Option<String>,
@@ -152,6 +153,7 @@ impl CloudClient {
         patch_data: &str,
         repo_name: Option<&str>,
         base_commit: Option<&str>,
+        workspace_id: Option<&str>,
     ) -> Result<CloudPatch, String> {
         let token = self.token.as_ref().ok_or("Not logged in to cloud server")?;
         let url = format!("{}/api/patches", self.server_url);
@@ -165,7 +167,8 @@ impl CloudClient {
                 "description": description,
                 "patch_data": patch_data,
                 "repo_name": repo_name,
-                "base_commit": base_commit
+                "base_commit": base_commit,
+                "workspace_id": workspace_id
             }))
             .send()
             .await

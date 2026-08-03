@@ -1,0 +1,2 @@
+ALTER TABLE patches
+ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE;
