@@ -314,7 +314,14 @@ export const cloudLogout = () => invoke("cloud_logout");
 export const getCloudSettings = () => invoke("get_cloud_settings");
 export const saveCloudSettings = (serverUrl, token) =>
   invoke("save_cloud_settings", { serverUrl, token: token || null });
-export const cloudPublishPatch = (title, description, patchData, repoName, baseCommit, workspaceId) =>
+export const cloudPublishPatch = (
+  title,
+  description,
+  patchData,
+  repoName,
+  baseCommit,
+  workspaceId
+) =>
   invoke("cloud_publish_patch", {
     title,
     description: description || null,
