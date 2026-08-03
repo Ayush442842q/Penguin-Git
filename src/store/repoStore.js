@@ -239,6 +239,22 @@ export const useRepoStore = create((set, get) => ({
     }
   },
 
+  triggerRedo: async () => {
+    const activeSlice = get().getActiveSlice();
+    if (!activeSlice || !activeSlice.repo) return false;
+    try {
+      const snapshot = await git.redoLastAction(activeSlice.repo.id);
+      set({
+        undoToast: { message: `Redid: ${snapshot.description}`, undone: false, redone: true },
+      });
+      await get().refresh(activeSlice.repo.id);
+      return true;
+    } catch (err) {
+      set({ error: String(err) });
+      return false;
+    }
+  },
+
   openRepoViaPicker: async () => {
     const path = await git.pickRepositoryFolder();
     if (!path) return false;

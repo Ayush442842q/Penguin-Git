@@ -5,12 +5,14 @@ import { useRepoStore } from "../../store/repoStore";
 
 describe("UndoToast Component", () => {
   const triggerUndo = vi.fn();
+  const triggerRedo = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     useRepoStore.setState({
       undoToast: { message: "Committed changes", undone: false },
       triggerUndo,
+      triggerRedo,
     });
   });
 
@@ -36,5 +38,31 @@ describe("UndoToast Component", () => {
     fireEvent.keyDown(window, { key: "z", ctrlKey: true });
 
     expect(triggerUndo).toHaveBeenCalled();
+  });
+
+  it("renders Redo button when action is undone", () => {
+    useRepoStore.setState({
+      undoToast: { message: "Undid: Commit", undone: true },
+      triggerUndo,
+      triggerRedo,
+    });
+
+    render(<UndoToast />);
+
+    expect(screen.getByTestId("redo-toast-btn")).toBeInTheDocument();
+    expect(screen.queryByTestId("undo-toast-btn")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("redo-toast-btn"));
+    expect(triggerRedo).toHaveBeenCalled();
+  });
+
+  it("triggers redo on Ctrl+Shift+Z or Ctrl+Y keypress", () => {
+    render(<UndoToast />);
+
+    fireEvent.keyDown(window, { key: "z", ctrlKey: true, shiftKey: true });
+    expect(triggerRedo).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true });
+    expect(triggerRedo).toHaveBeenCalledTimes(2);
   });
 });
