@@ -55,7 +55,7 @@ where
             "SELECT u.id, u.username
              FROM users u
              INNER JOIN tokens t ON u.id = t.user_id
-             WHERE t.token = $1",
+             WHERE t.token = $1 AND t.expires_at > now()",
         )
         .bind(&token_str)
         .fetch_optional(&app_state.db)
