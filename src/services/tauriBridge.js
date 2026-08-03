@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { open as openDialog, save as saveDialog } from "@tauri-apps/plugin-dialog";
 
 /**
  * Typed wrappers around Tauri's `invoke()`.
@@ -263,3 +263,67 @@ export const githubCreatePr = (repoPath, title, body, head, base) =>
   invoke("github_create_pr", { repoPath, title, body: body || "", head, base });
 export const startWorkOnIssue = (repoPath, number, title) =>
   invoke("start_work_on_issue", { repoPath, number, title });
+
+// -- patch --------------------------------------------------------------------
+
+export const exportPatch = (repoPath, commitRange) =>
+  invoke("export_patch", { repoPath, commitRange: commitRange || null });
+
+export const previewPatch = (repoPath, patchContent) =>
+  invoke("preview_patch", { repoPath, patchContent });
+
+export const applyPatch = (repoPath, patchContent) =>
+  invoke("apply_patch", { repoPath, patchContent });
+
+export async function savePatchFile(defaultName) {
+  const selected = await saveDialog({
+    defaultPath: defaultName,
+    filters: [{ name: "Patch File", extensions: ["patch", "diff"] }],
+    title: "Save Patch File",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+export async function pickPatchFile() {
+  const selected = await openDialog({
+    directory: false,
+    multiple: false,
+    filters: [{ name: "Patch File", extensions: ["patch", "diff"] }],
+    title: "Select Patch File to Import",
+  });
+  return typeof selected === "string" ? selected : null;
+}
+
+// -- workspace ----------------------------------------------------------------
+
+export const createWorkspace = (name) => invoke("create_workspace", { name });
+export const renameWorkspace = (id, newName) => invoke("rename_workspace", { id, newName });
+export const deleteWorkspace = (id) => invoke("delete_workspace", { id });
+export const listWorkspaces = () => invoke("list_workspaces");
+export const addRepoToWorkspace = (workspaceId, repoId) =>
+  invoke("add_repo_to_workspace", { workspaceId, repoId });
+export const removeRepoFromWorkspace = (workspaceId, repoId) =>
+  invoke("remove_repo_from_workspace", { workspaceId, repoId });
+export const listWorkspaceRepos = (workspaceId) => invoke("list_workspace_repos", { workspaceId });
+
+// -- cloud --------------------------------------------------------------------+
+
+export const cloudLogin = (serverUrl, username, password) =>
+  invoke("cloud_login", { serverUrl, username, password });
+export const cloudLogout = () => invoke("cloud_logout");
+export const getCloudSettings = () => invoke("get_cloud_settings");
+export const saveCloudSettings = (serverUrl, token) =>
+  invoke("save_cloud_settings", { serverUrl, token: token || null });
+export const cloudPublishPatch = (title, description, patchData, repoName, baseCommit) =>
+  invoke("cloud_publish_patch", {
+    title,
+    description: description || null,
+    patchData,
+    repoName: repoName || null,
+    baseCommit: baseCommit || null,
+  });
+export const cloudListPatches = () => invoke("cloud_list_patches");
+export const cloudAddComment = (patchId, body) => invoke("cloud_add_comment", { patchId, body });
+export const cloudListComments = (patchId) => invoke("cloud_list_comments", { patchId });
+export const cloudCreateWorkspace = (name) => invoke("cloud_create_workspace", { name });
+export const cloudListWorkspaces = () => invoke("cloud_list_workspaces");

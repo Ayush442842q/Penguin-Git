@@ -90,6 +90,63 @@ pub fn run_git_raw_with_env(
     })
 }
 
+/// Runs `git <args>` piping `stdin_data` to the child's stdin, returns stdout
+/// on success.
+///
+/// Needed for commands like `git apply -` and `git am` that read patch data
+/// from stdin rather than a file path argument.
+pub fn run_git_with_stdin(
+    cwd: &Path,
+    args: &[&str],
+    stdin_data: &[u8],
+) -> Result<String, GitError> {
+    let output = run_git_raw_with_stdin(cwd, args, stdin_data)?;
+
+    if output.success() {
+        Ok(output.stdout)
+    } else {
+        Err(GitError::CommandFailed {
+            exit_code: output.exit_code,
+            stderr: output.stderr,
+        })
+    }
+}
+
+/// Like [`run_git_raw`] but pipes `stdin_data` to the child process.
+pub fn run_git_raw_with_stdin(
+    cwd: &Path,
+    args: &[&str],
+    stdin_data: &[u8],
+) -> Result<GitOutput, GitError> {
+    use std::io::Write;
+    use std::process::Stdio;
+
+    let mut child = Command::new("git")
+        .current_dir(cwd)
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("SSH_ASKPASS_REQUIRE", "never")
+        .spawn()?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        // Write all data then drop to close the pipe so git sees EOF.
+        stdin.write_all(stdin_data)?;
+    }
+
+    let output = child.wait_with_output()?;
+
+    Ok(GitOutput {
+        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+        stderr: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        exit_code: output.status.code(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,5 +305,38 @@ mod tests {
             !probe.contains("GIT_SSH_COMMAND"),
             "GIT_SSH_COMMAND must never be set — it overrides core.sshCommand"
         );
+    }
+
+    #[test]
+    fn run_git_with_stdin_pipes_data_to_git() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "line1\n", "Initial commit");
+        repo.write("a.txt", "line1\nline2\n");
+        repo.git(&["add", "a.txt"]);
+
+        // Generate a patch from the staged change.
+        let patch =
+            run_git(repo.path(), &["diff", "--cached", "--no-color"]).expect("diff should succeed");
+
+        // Reset the index and working tree so the patch can be re-applied.
+        repo.git(&["reset", "--hard", "HEAD"]);
+
+        // Apply the patch via stdin — this is the path used by Import Patch.
+        let result = run_git_with_stdin(repo.path(), &["apply", "--check"], patch.as_bytes());
+        assert!(result.is_ok(), "git apply --check via stdin should succeed");
+    }
+
+    #[test]
+    fn run_git_raw_with_stdin_returns_output_on_failure() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "hello\n", "Initial commit");
+
+        // Feed garbage to git apply — it should fail but not panic.
+        let output =
+            run_git_raw_with_stdin(repo.path(), &["apply", "--check"], b"not a valid patch\n")
+                .expect("spawning should succeed even when git rejects the input");
+
+        assert!(!output.success());
+        assert!(!output.stderr.is_empty());
     }
 }

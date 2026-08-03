@@ -6,6 +6,8 @@ import StashPanel from "./StashPanel";
 import "./Sidebar.css";
 
 import SubmodulePanel from "../SubmodulePanel/SubmodulePanel";
+import PatchPanel from "../PatchPanel/PatchPanel";
+import CloudPatches from "../CloudPatches/CloudPatches";
 import "./Sidebar.css";
 
 export default function Sidebar() {
@@ -15,6 +17,8 @@ export default function Sidebar() {
   const run = useRepoStore((s) => s.run);
 
   const [showRemotes, setShowRemotes] = useState(false);
+  const [showPatchModal, setShowPatchModal] = useState(false);
+  const [showCloudPatches, setShowCloudPatches] = useState(false);
 
   if (!slice || !slice.repo) return null;
   const repo = slice.repo;
@@ -64,6 +68,18 @@ export default function Sidebar() {
         <SubmodulePanel />
 
         <div className="sidebar-section">
+          <button className="ghost sidebar-section-toggle" onClick={() => setShowPatchModal(true)}>
+            <span className="section-label">📄 Share via File (Patch)</span>
+          </button>
+          <button
+            className="ghost sidebar-section-toggle"
+            onClick={() => setShowCloudPatches(true)}
+          >
+            <span className="section-label">☁️ Cloud Patches</span>
+          </button>
+        </div>
+
+        <div className="sidebar-section">
           <button
             className="ghost sidebar-section-toggle"
             onClick={() => setShowRemotes((open) => !open)}
@@ -86,6 +102,12 @@ export default function Sidebar() {
           )}
         </div>
       </div>
+      <PatchPanel isOpen={showPatchModal} onClose={() => setShowPatchModal(false)} />
+      <CloudPatches
+        isOpen={showCloudPatches}
+        onClose={() => setShowCloudPatches(false)}
+        activeRepoPath={repo.path}
+      />
     </aside>
   );
 }

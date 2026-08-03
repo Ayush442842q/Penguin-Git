@@ -7,6 +7,54 @@
   padding: 2rem;
 }
 
+.launcher-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.launcher-tabs {
+  display: flex;
+  gap: 0.5rem;
+  background-color: var(--color-bg-primary, #020617);
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border, #334155);
+}
+
+.launcher-tab {
+  padding: 0.375rem 0.875rem;
+  border-radius: 0.375rem;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary, #cbd5e1);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.launcher-tab:hover {
+  color: var(--color-text, #f8fafc);
+}
+
+.launcher-tab.active {
+  background-color: var(--color-bg-tertiary, #1e293b);
+  color: var(--color-accent-light, #818cf8);
+}
+
+.launcher-workspaces-wrapper {
+  width: 100%;
+  max-width: 860px;
+  height: 480px;
+  background-color: var(--color-bg-secondary, #0f172a);
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
 .launcher-repo-btn {
   display: flex;
   align-items: center;

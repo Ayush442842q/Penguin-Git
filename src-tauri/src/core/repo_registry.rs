@@ -19,7 +19,7 @@ pub struct RegisteredRepo {
 /// Stores recently opened repositories, their kinds (plain / worktree / submodule),
 /// and relationships. Designed to be extensible for future Cloud Workspaces data.
 pub struct RepoRegistry {
-    conn: Mutex<rusqlite::Connection>,
+    pub(crate) conn: Mutex<rusqlite::Connection>,
 }
 
 impl RepoRegistry {
@@ -55,7 +55,18 @@ impl RepoRegistry {
                 kind TEXT NOT NULL,
                 primary_repo_id TEXT
             );
-            CREATE INDEX IF NOT EXISTS idx_repos_last_opened ON repos(last_opened_at DESC);",
+            CREATE INDEX IF NOT EXISTS idx_repos_last_opened ON repos(last_opened_at DESC);
+            CREATE TABLE IF NOT EXISTS workspaces (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS workspace_repos (
+                workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+                repo_id TEXT NOT NULL,
+                added_at TEXT NOT NULL,
+                PRIMARY KEY (workspace_id, repo_id)
+            );",
         )?;
         Ok(())
     }

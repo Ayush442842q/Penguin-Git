@@ -116,6 +116,29 @@ pub fn run() {
             commands::github::github_get_pr,
             commands::github::github_create_pr,
             commands::github::start_work_on_issue,
+            // patch
+            commands::patch::export_patch,
+            commands::patch::preview_patch,
+            commands::patch::apply_patch,
+            // workspace
+            commands::workspace::create_workspace,
+            commands::workspace::rename_workspace,
+            commands::workspace::delete_workspace,
+            commands::workspace::list_workspaces,
+            commands::workspace::add_repo_to_workspace,
+            commands::workspace::remove_repo_from_workspace,
+            commands::workspace::list_workspace_repos,
+            // cloud
+            commands::cloud::cloud_login,
+            commands::cloud::cloud_logout,
+            commands::cloud::get_cloud_settings,
+            commands::cloud::save_cloud_settings,
+            commands::cloud::cloud_publish_patch,
+            commands::cloud::cloud_list_patches,
+            commands::cloud::cloud_add_comment,
+            commands::cloud::cloud_list_comments,
+            commands::cloud::cloud_create_workspace,
+            commands::cloud::cloud_list_workspaces,
         ])
         .run(tauri::generate_context!())
         .expect("error while running PenguinGit");

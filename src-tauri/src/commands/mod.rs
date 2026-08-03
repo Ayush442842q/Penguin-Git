@@ -7,6 +7,7 @@
 
 pub mod ai;
 pub mod branch;
+pub mod cloud;
 pub mod commit;
 pub mod conflict;
 pub mod diff;
@@ -15,6 +16,7 @@ pub mod mcp;
 pub mod rebase;
 
 pub mod github;
+pub mod patch;
 pub mod registry;
 pub mod remote;
 pub mod repo;
@@ -23,6 +25,7 @@ pub mod stash;
 pub mod status;
 pub mod submodule;
 pub mod undo;
+pub mod workspace;
 
 use crate::core::GitError;
 

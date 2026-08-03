@@ -6,6 +6,7 @@
 
 pub mod ai;
 pub mod branch;
+pub mod cloud;
 pub mod commit;
 pub mod conflict;
 pub mod diff;
@@ -14,6 +15,7 @@ pub mod log;
 pub mod mcp_event;
 pub mod mcp_ipc;
 pub mod merge_state;
+pub mod patch;
 
 pub mod rebase;
 pub mod remote;
@@ -26,6 +28,7 @@ pub mod status;
 pub mod submodule;
 pub mod undo;
 pub mod watcher;
+pub mod workspace;
 pub mod worktree;
 
 #[cfg(test)]

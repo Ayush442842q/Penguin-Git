@@ -2,5 +2,6 @@
 members = [
     "src-tauri",
     "crates/penguingit-mcp",
+    "crates/penguingit-server",
 ]
 resolver = "2"
