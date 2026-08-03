@@ -86,9 +86,10 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Audit Rust dependencies
-        uses: rustsec/audit-check@dd51754d4e59da7395a4cd9b593f0ff2d61a9b95 # v1.4.1
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@67729d5c413db75907f0ad1e39bb04b9c868ff60 # v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # Kept in sync with .cargo/audit.toml's [advisories] ignore list.
-          ignore: RUSTSEC-2023-0071
+          tool: cargo-audit
+
+      - name: Audit Rust dependencies
+        run: cargo audit
