@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { HashRouter, Routes, Route, useParams, useNavigate } from "react-router-dom";
+import { HashRouter, Routes, Route, useParams, useNavigate } from "react-router";
 import { useRepoStore, subscribeToRepoChanges } from "./store/repoStore";
 import Launcher from "./components/Launcher/Launcher";
 import RepoTabs from "./components/RepoTabs/RepoTabs";
