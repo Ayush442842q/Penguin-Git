@@ -27,7 +27,6 @@ struct GithubPullRequest {
     state: String,
     updated_at: String,
     user: GithubUserMinimal,
-    draft: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -124,18 +123,7 @@ impl GitHostClient for GithubClient {
         let mut items = Vec::new();
 
         for pr in prs {
-            let is_author = pr.user.login == current_user;
-            let is_draft = pr.draft.unwrap_or(false);
-
-            let category = if is_author {
-                if !is_draft {
-                    "Ready to merge".to_string()
-                } else {
-                    "Your PRs".to_string()
-                }
-            } else {
-                "Needs review".to_string()
-            };
+            let category = categorize_pr(&pr.user.login, &current_user).to_string();
 
             items.push(LaunchpadItem {
                 kind: "pr".to_string(),
@@ -172,13 +160,8 @@ impl GitHostClient for GithubClient {
             .map_err(|e| format!("Failed to parse PR: {e}"))?;
 
         let current_user = self.get_current_user_login().await.unwrap_or_default();
-        let is_author = pr.user.login == current_user;
 
-        let category = if is_author {
-            "Your PRs".to_string()
-        } else {
-            "Needs review".to_string()
-        };
+        let category = categorize_pr(&pr.user.login, &current_user).to_string();
 
         Ok(LaunchpadItem {
             kind: "pr".to_string(),
@@ -305,6 +288,14 @@ impl GitHostClient for GithubClient {
     }
 }
 
+pub(crate) fn categorize_pr(author: &str, current_user: &str) -> &'static str {
+    if author == current_user {
+        "Your PRs"
+    } else {
+        "Needs review"
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -315,5 +306,22 @@ mod tests {
         assert!(client.is_ok());
         let client = client.unwrap();
         assert_eq!(client.token, "ghp_test123");
+    }
+
+    #[test]
+    fn test_pr_categorization() {
+        let current_user = "alice";
+
+        // 1. Own draft PR
+        assert_eq!(categorize_pr("alice", current_user), "Your PRs");
+
+        // 2. Own non-draft / unreviewed PR
+        assert_eq!(categorize_pr("alice", current_user), "Your PRs");
+
+        // 3. Own approved PR
+        assert_eq!(categorize_pr("alice", current_user), "Your PRs");
+
+        // 4. Someone else's PR
+        assert_eq!(categorize_pr("bob", current_user), "Needs review");
     }
 }
