@@ -39,6 +39,9 @@
       "deb": {
         "depends": ["git"]
       },
+      "rpm": {
+        "depends": ["git"]
+      },
       "appimage": {}
     }
   }
