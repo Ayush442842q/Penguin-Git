@@ -85,9 +85,11 @@ pub fn run() {
             // rebase
             commands::rebase::plain_rebase,
             commands::rebase::interactive_rebase,
-            // undo
+            // undo & redo
             commands::undo::undo_last_action,
+            commands::undo::redo_last_action,
             commands::undo::get_undo_history,
+            commands::undo::get_redo_history,
             // registry
             commands::registry::list_recent_repos,
             commands::registry::forget_recent_repo,
