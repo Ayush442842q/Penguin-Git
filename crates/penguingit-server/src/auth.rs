@@ -101,11 +101,11 @@ mod tests {
 
     #[test]
     fn test_password_hashing_and_verification() {
-        let password = "SuperSecretPassword123!";
+        let password = "SuperSecretPassword123!"; // codeql[rust/hard-coded-cryptographic-value] test fixture, not a real credential
         let hash = hash_password(password).expect("hashing should succeed");
 
         assert!(verify_password(password, &hash));
-        assert!(!verify_password("WrongPassword", &hash));
+        assert!(!verify_password("WrongPassword", &hash)); // codeql[rust/hard-coded-cryptographic-value] test fixture, not a real credential
     }
 
     #[test]
