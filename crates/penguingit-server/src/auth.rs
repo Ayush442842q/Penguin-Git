@@ -1,5 +1,8 @@
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{
+        rand_core::{OsRng, RngCore},
+        PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+    },
     Argon2,
 };
 use axum::{
@@ -7,7 +10,6 @@ use axum::{
     extract::{FromRef, FromRequestParts},
     http::{header, request::Parts},
 };
-use rand::RngCore;
 use std::sync::Arc;
 use uuid::Uuid;
 
