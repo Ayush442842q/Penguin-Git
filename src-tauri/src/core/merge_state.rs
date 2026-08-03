@@ -13,6 +13,7 @@ pub enum OperationKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RepoOperationState {
     pub kind: Option<OperationKind>,
     pub head_name: Option<String>,
@@ -141,6 +142,33 @@ pub fn detect_operation_state(cwd: &Path) -> RepoOperationState {
 mod tests {
     use super::*;
     use crate::core::test_support::FixtureRepo;
+
+    #[test]
+    fn repo_operation_state_serializes_as_camel_case() {
+        // The frontend consumes this over the Tauri IPC boundary and expects
+        // camelCase, matching every other Serialize struct that crosses it
+        // (LaunchpadItem, SubmoduleStatus, AiConfigResponse, ...). Without
+        // the rename, `conflicted_paths` ships as snake_case and the
+        // frontend's `conflictedPaths` read is always undefined — which is
+        // exactly what happened before this attribute was added.
+        let state = RepoOperationState {
+            kind: Some(OperationKind::Merge),
+            head_name: Some("main".to_string()),
+            onto: None,
+            conflicted_paths: vec!["a.txt".to_string()],
+        };
+        let json = serde_json::to_value(&state).unwrap();
+        assert!(
+            json.get("headName").is_some(),
+            "expected headName, got: {json}"
+        );
+        assert!(
+            json.get("conflictedPaths").is_some(),
+            "expected conflictedPaths, got: {json}"
+        );
+        assert!(json.get("head_name").is_none());
+        assert!(json.get("conflicted_paths").is_none());
+    }
 
     #[test]
     fn clean_repo_has_no_operation_in_progress() {
