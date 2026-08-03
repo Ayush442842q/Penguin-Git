@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useRepoStore } from "../../store/repoStore";
 import Workspaces from "../Workspaces/Workspaces";
 import "./Launcher.css";
