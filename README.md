@@ -20,7 +20,7 @@ PenguinGit brings GitKraken's visual power to the Linux desktop — including th
 
 It's also **agent-native**: a built-in MCP server exposes the same git operations the GUI uses, so AI coding assistants can drive your repository with every change reflected live in the UI.
 
-> **Early development.** Phases 0 and 1 are done — core git engine, commit graph, diff viewer, staging, branches, and stash. There's no usable release yet. See the [roadmap](docs/ROADMAP.md).
+> **Early development.** Phases 0 and 1 are done — core git engine, commit graph, diff viewer, staging, branches, and stash. [v0.1.0](https://github.com/Ayush442842q/Penguin-Git/releases/tag/v0.1.0) is the first packaged release (`.deb` / `.rpm` / `.AppImage`); everything past that is still in progress. See the [roadmap](docs/ROADMAP.md).
 
 ## Highlights
 
@@ -29,7 +29,23 @@ It's also **agent-native**: a built-in MCP server exposes the same git operation
 - **Live updates** — driven by a filesystem watcher, not a polling loop
 - **Coming**: visual merge conflict resolution, interactive rebase, undo/redo, multi-repo, MCP server, bring-your-own-key AI, GitHub Launchpad, self-hosted cloud patches
 
-## Quick start
+## Install
+
+Grab the `.rpm`, `.deb`, or `.AppImage` from the [v0.1.0 release](https://github.com/Ayush442842q/Penguin-Git/releases/tag/v0.1.0). On Fedora/RHEL:
+
+```bash
+sudo dnf install ./PenguinGit-0.1.0-1.x86_64.rpm
+```
+
+On Debian/Ubuntu:
+
+```bash
+sudo apt install ./PenguinGit_0.1.0_amd64.deb
+```
+
+`git` is a declared package dependency and will be pulled in automatically if missing.
+
+## Build from source
 
 Install the Tauri build dependencies for your distro — Fedora:
 
