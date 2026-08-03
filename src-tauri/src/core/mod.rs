@@ -14,6 +14,7 @@ pub mod exec;
 pub mod log;
 pub mod mcp_event;
 pub mod mcp_ipc;
+pub mod mcp_server;
 pub mod merge_state;
 pub mod patch;
 
