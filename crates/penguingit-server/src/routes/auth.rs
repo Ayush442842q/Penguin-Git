@@ -86,10 +86,12 @@ pub async fn login(
     }
 
     let token_str = generate_opaque_token();
+    let expires_at = chrono::Utc::now() + chrono::Duration::days(30);
 
-    sqlx::query("INSERT INTO tokens (token, user_id) VALUES ($1, $2)")
+    sqlx::query("INSERT INTO tokens (token, user_id, expires_at) VALUES ($1, $2, $3)")
         .bind(&token_str)
         .bind(user.id)
+        .bind(expires_at)
         .execute(&state.db)
         .await?;
 
