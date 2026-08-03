@@ -30,7 +30,7 @@ pub fn start_mcp_event_listeners(app_handle: AppHandle) {
     // 1. In-process broadcast listener (embedded mode)
     let app_broadcast = Arc::clone(&app);
     let mut rx = get_event_bus().subscribe();
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         while let Ok(event) = rx.recv().await {
             emit_mcp_event(&app_broadcast, &event.tool, &event.repo_path);
         }
@@ -38,7 +38,7 @@ pub fn start_mcp_event_listeners(app_handle: AppHandle) {
 
     // 2. Standalone IPC / Embedded MCP Server over Unix domain socket
     let app_socket = Arc::clone(&app);
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         // Clean up any existing socket file from previous runs
         let _ = std::fs::remove_file(UNIX_SOCKET_PATH);
 
