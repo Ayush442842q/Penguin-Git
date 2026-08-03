@@ -405,4 +405,3 @@ mod tests {
         assert!(log_json.contains("initial commit"));
     }
 }
-
