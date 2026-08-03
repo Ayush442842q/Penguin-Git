@@ -106,12 +106,12 @@
 }
 
 .app-center .commit-graph {
-  flex: 1 1 55%;
+  flex: 0 0 var(--graph-h, 55%);
   min-height: 0;
 }
 
 .app-center .diff-viewer {
-  flex: 1 1 45%;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
