@@ -6,6 +6,17 @@ All notable changes to this project are documented here. Format loosely follows 
 
 Not started. See [ROADMAP.md](ROADMAP.md#phases) for scope.
 
+## v0.1.0 — First release (2026-08-03)
+
+The Phase 0 + Phase 1 feature set, packaged for the first time.
+
+### Added
+
+- `.rpm`, `.deb`, and `.AppImage` bundles via `tauri build`, published as the [v0.1.0 GitHub release](https://github.com/Ayush442842q/Penguin-Git/releases/tag/v0.1.0)
+- `license = "MIT"` in `src-tauri/Cargo.toml` so bundle metadata carries a real license instead of an empty field
+- `git` declared as an RPM runtime dependency (`bundle.linux.rpm.depends`), matching the existing `.deb` dependency
+- README install instructions for the packaged `.rpm` / `.deb`
+
 ## Phase 1 — Core git engine & core UI (2026-08-01)
 
 The single-repo feature set — status, staging, commit, log/graph, diff, branches, remotes, stash — built on the core/adapter split.
