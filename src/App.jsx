@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { HashRouter, Routes, Route, useParams, useNavigate } from "react-router-dom";
 import { useRepoStore, subscribeToRepoChanges } from "./store/repoStore";
+import { useResizable } from "./hooks/useResizable";
 import Launcher from "./components/Launcher/Launcher";
 import RepoTabs from "./components/RepoTabs/RepoTabs";
 import Sidebar from "./components/Sidebar/Sidebar";
 import CommitGraph from "./components/CommitGraph/CommitGraph";
 import DiffViewer from "./components/DiffViewer/DiffViewer";
 import StagingPanel from "./components/StagingPanel/StagingPanel";
+import ResizeHandle from "./components/ResizeHandle/ResizeHandle";
 import { ConflictEditor } from "./components/ConflictEditor/ConflictEditor";
 import { RebaseDialog } from "./components/RebaseDialog/RebaseDialog";
 import { UndoToast } from "./components/UndoToast/UndoToast";
@@ -133,6 +135,29 @@ function RepoView() {
     }
   }, [repoId, activeRepoId, slice, setActiveRepoId, navigate]);
 
+  const sidebar = useResizable({
+    axis: "x",
+    initial: 260,
+    min: 180,
+    max: 480,
+    storageKey: "penguingit:sidebar-w",
+  });
+  const detail = useResizable({
+    axis: "x",
+    initial: 340,
+    min: 240,
+    max: 560,
+    storageKey: "penguingit:detail-w",
+    reverse: true,
+  });
+  const graph = useResizable({
+    axis: "y",
+    initial: 400,
+    min: 120,
+    max: 900,
+    storageKey: "penguingit:graph-h",
+  });
+
   if (!slice || !slice.repo) {
     return <Launcher />;
   }
@@ -147,20 +172,26 @@ function RepoView() {
     operationState?.kind != null;
 
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      style={{ "--sidebar-w": `${sidebar.size}px`, "--detail-w": `${detail.size}px` }}
+    >
       <Header />
       <div className="app-body">
         <Sidebar />
+        <ResizeHandle axis="x" onPointerDown={sidebar.onPointerDown} />
         <div className="app-center">
           {hasConflict ? (
             <ConflictEditor path={activeConflictPath} />
           ) : (
             <>
-              <CommitGraph />
+              <CommitGraph style={{ "--graph-h": `${graph.size}px` }} />
+              <ResizeHandle axis="y" onPointerDown={graph.onPointerDown} />
               <DiffViewer />
             </>
           )}
         </div>
+        <ResizeHandle axis="x" onPointerDown={detail.onPointerDown} />
         <StagingPanel />
       </div>
       <StatusBar />
