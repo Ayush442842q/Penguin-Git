@@ -1,0 +1,10 @@
+# cargo-audit configuration — see https://docs.rs/cargo-audit/latest/cargo_audit/config
+
+[advisories]
+ignore = [
+    # rsa: Marvin Attack timing side-channel. Pulled in transitively via an
+    # optional sqlx-mysql dependency that this workspace does not enable
+    # (only the "postgres" sqlx feature is used) and has no upstream fix.
+    # https://rustsec.org/advisories/RUSTSEC-2023-0071
+    "RUSTSEC-2023-0071",
+]
