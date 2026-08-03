@@ -115,6 +115,20 @@ describe("tauriBridge", () => {
         "update_submodule",
         { repoPath: "/r", submodulePath: "sub" },
       ],
+      [
+        "undoLastAction",
+        () => git.undoLastAction("r1"),
+        "undo_last_action",
+        { repoId: { 0: "r1" } },
+      ],
+      [
+        "redoLastAction",
+        () => git.redoLastAction("r1"),
+        "redo_last_action",
+        { repoId: { 0: "r1" } },
+      ],
+      ["getUndoHistory", () => git.getUndoHistory(), "get_undo_history", undefined],
+      ["getRedoHistory", () => git.getRedoHistory(), "get_redo_history", undefined],
     ];
 
     it.each(cases)("%s", (_name, call, expectedCommand, expectedArgs) => {

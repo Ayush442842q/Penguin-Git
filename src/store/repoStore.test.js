@@ -192,4 +192,28 @@ describe("repoStore", () => {
 
     expect(git.getStatus).toHaveBeenCalledWith("/repo");
   });
+
+  it("triggerUndo and triggerRedo invoke backend git services and set toast state", async () => {
+    await openFixtureRepo();
+
+    git.undoLastAction.mockResolvedValue({ description: "Commit feature" });
+    git.redoLastAction.mockResolvedValue({ description: "Commit feature" });
+
+    const undoOk = await useRepoStore.getState().triggerUndo();
+    expect(undoOk).toBe(true);
+    expect(git.undoLastAction).toHaveBeenCalledWith("/repo");
+    expect(useRepoStore.getState().undoToast).toEqual({
+      message: "Undid: Commit feature",
+      undone: true,
+    });
+
+    const redoOk = await useRepoStore.getState().triggerRedo();
+    expect(redoOk).toBe(true);
+    expect(git.redoLastAction).toHaveBeenCalledWith("/repo");
+    expect(useRepoStore.getState().undoToast).toEqual({
+      message: "Redid: Commit feature",
+      undone: false,
+      redone: true,
+    });
+  });
 });

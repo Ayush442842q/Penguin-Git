@@ -37,17 +37,21 @@ pub struct ActionSnapshot {
     pub timestamp: u64,
     pub description: String,
     pub action_type: ActionType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub undone_ref: Option<String>,
 }
 
 #[derive(Debug, Default)]
 pub struct ActionJournal {
     history: Mutex<Vec<ActionSnapshot>>,
+    redo_stack: Mutex<Vec<ActionSnapshot>>,
 }
 
 impl ActionJournal {
     pub fn new() -> Self {
         Self {
             history: Mutex::new(Vec::new()),
+            redo_stack: Mutex::new(Vec::new()),
         }
     }
 
@@ -64,16 +68,21 @@ impl ActionJournal {
             timestamp,
             description: description.into(),
             action_type,
+            undone_ref: None,
         };
 
         let mut lock = self.history.lock().unwrap();
         lock.push(snapshot);
+
+        let mut redo_lock = self.redo_stack.lock().unwrap();
+        redo_lock.clear();
+
         id
     }
 
     /// Reverts the latest recorded action following the exact mapping table.
     pub fn undo_latest(&self, cwd: &Path) -> Result<ActionSnapshot, GitError> {
-        let snapshot = {
+        let mut snapshot = {
             let mut lock = self.history.lock().unwrap();
             lock.pop().ok_or_else(|| GitError::CommandFailed {
                 exit_code: None,
@@ -83,6 +92,12 @@ impl ActionJournal {
 
         match &snapshot.action_type {
             ActionType::Commit { .. } => {
+                let current_head = run_git(cwd, &["rev-parse", "HEAD"])
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string();
+                snapshot.undone_ref = Some(current_head);
+
                 // commit -> git reset --soft HEAD~1
                 run_git(cwd, &["reset", "--soft", "HEAD~1"])?;
             }
@@ -117,10 +132,75 @@ impl ActionJournal {
                 );
             }
             ActionType::Checkout { previous_ref } => {
+                let current_ref = run_git(cwd, &["rev-parse", "--abbrev-ref", "HEAD"])
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string();
+                let target_ref = if current_ref == "HEAD" {
+                    run_git(cwd, &["rev-parse", "HEAD"])
+                        .unwrap_or_default()
+                        .trim()
+                        .to_string()
+                } else {
+                    current_ref
+                };
+                snapshot.undone_ref = Some(target_ref);
+
                 // checkout/branch-switch -> checkout back to previous branch/commit
                 run_git(cwd, &["checkout", previous_ref])?;
             }
         }
+
+        let mut redo_lock = self.redo_stack.lock().unwrap();
+        redo_lock.push(snapshot.clone());
+
+        Ok(snapshot)
+    }
+
+    /// Re-applies the latest undone action from the redo stack.
+    pub fn redo_latest(&self, cwd: &Path) -> Result<ActionSnapshot, GitError> {
+        let snapshot = {
+            let mut lock = self.redo_stack.lock().unwrap();
+            lock.pop().ok_or_else(|| GitError::CommandFailed {
+                exit_code: None,
+                stderr: "No action available to redo in action journal".into(),
+            })?
+        };
+
+        match &snapshot.action_type {
+            ActionType::Commit { .. } => {
+                if let Some(target_hash) = &snapshot.undone_ref {
+                    run_git(cwd, &["reset", "--soft", target_hash])?;
+                } else {
+                    return Err(GitError::CommandFailed {
+                        exit_code: None,
+                        stderr: "Cannot redo commit: missing target commit hash".into(),
+                    });
+                }
+            }
+            ActionType::BranchDelete { branch_name, .. } => {
+                run_git(cwd, &["branch", "-D", branch_name])?;
+            }
+            ActionType::Merge { target_ref, .. } => {
+                run_git(cwd, &["merge", target_ref])?;
+            }
+            ActionType::StashPop { .. } => {
+                run_git(cwd, &["stash", "pop"])?;
+            }
+            ActionType::Checkout { .. } => {
+                if let Some(target_ref) = &snapshot.undone_ref {
+                    run_git(cwd, &["checkout", target_ref])?;
+                } else {
+                    return Err(GitError::CommandFailed {
+                        exit_code: None,
+                        stderr: "Cannot redo checkout: missing target ref".into(),
+                    });
+                }
+            }
+        }
+
+        let mut history_lock = self.history.lock().unwrap();
+        history_lock.push(snapshot.clone());
 
         Ok(snapshot)
     }
@@ -130,9 +210,16 @@ impl ActionJournal {
         lock.clone()
     }
 
+    pub fn get_redo_history(&self) -> Vec<ActionSnapshot> {
+        let lock = self.redo_stack.lock().unwrap();
+        lock.clone()
+    }
+
     pub fn clear(&self) {
         let mut lock = self.history.lock().unwrap();
         lock.clear();
+        let mut redo_lock = self.redo_stack.lock().unwrap();
+        redo_lock.clear();
     }
 }
 
@@ -266,6 +353,73 @@ mod tests {
         assert_eq!(
             repo.git(&["rev-parse", "--abbrev-ref", "HEAD"]).trim(),
             "main"
+        );
+    }
+
+    #[test]
+    fn redo_commit_and_checkout_flow() {
+        let repo = FixtureRepo::new();
+        let head1 = repo.commit("a.txt", "1\n", "initial");
+        repo.git(&["branch", "feature"]);
+
+        let journal = ActionJournal::new();
+        journal.record(
+            ActionType::Commit {
+                previous_head: head1.clone(),
+            },
+            "Commit 2",
+        );
+        let head2 = repo.commit("b.txt", "2\n", "second commit");
+
+        // Undo commit
+        let undone = journal.undo_latest(repo.path()).expect("undo commit");
+        assert_eq!(repo.git(&["rev-parse", "HEAD"]).trim(), head1);
+        assert_eq!(journal.get_redo_history().len(), 1);
+
+        // Redo commit
+        let redone = journal.redo_latest(repo.path()).expect("redo commit");
+        assert_eq!(redone.id, undone.id);
+        assert_eq!(repo.git(&["rev-parse", "HEAD"]).trim(), head2);
+        assert_eq!(journal.get_redo_history().len(), 0);
+        assert_eq!(journal.get_history().len(), 1);
+
+        // Test record clears redo stack
+        journal.undo_latest(repo.path()).expect("undo commit");
+        assert_eq!(journal.get_redo_history().len(), 1);
+        journal.record(
+            ActionType::Checkout {
+                previous_ref: "main".into(),
+            },
+            "Checkout feature",
+        );
+        assert_eq!(journal.get_redo_history().len(), 0);
+    }
+
+    #[test]
+    fn redo_branch_delete_and_checkout() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "1\n", "initial");
+        repo.git(&["branch", "feature"]);
+
+        let journal = ActionJournal::new();
+        journal.record(
+            ActionType::Checkout {
+                previous_ref: "main".into(),
+            },
+            "Checkout branch feature",
+        );
+        repo.git(&["checkout", "feature"]);
+
+        journal.undo_latest(repo.path()).expect("undo checkout");
+        assert_eq!(
+            repo.git(&["rev-parse", "--abbrev-ref", "HEAD"]).trim(),
+            "main"
+        );
+
+        journal.redo_latest(repo.path()).expect("redo checkout");
+        assert_eq!(
+            repo.git(&["rev-parse", "--abbrev-ref", "HEAD"]).trim(),
+            "feature"
         );
     }
 }

@@ -18,6 +18,25 @@ pub fn undo_last_action(
 }
 
 #[tauri::command]
+pub fn redo_last_action(
+    state: State<'_, AppState>,
+    repo_id: RepoId,
+) -> Result<ActionSnapshot, String> {
+    let repo = state
+        .get(&repo_id)
+        .ok_or_else(|| format!("Unknown repository: {}", repo_id.as_str()))?;
+    state
+        .journal
+        .redo_latest(&repo.path)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn get_undo_history(state: State<'_, AppState>) -> Result<Vec<ActionSnapshot>, String> {
     Ok(state.journal.get_history())
+}
+
+#[tauri::command]
+pub fn get_redo_history(state: State<'_, AppState>) -> Result<Vec<ActionSnapshot>, String> {
+    Ok(state.journal.get_redo_history())
 }
