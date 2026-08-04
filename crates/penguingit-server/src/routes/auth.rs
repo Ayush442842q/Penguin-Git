@@ -138,7 +138,7 @@ mod tests {
         // Test with empty password
         let req = RegisterRequest {
             username: "testuser".to_string(),
-            password: "   ".to_string(),
+            password: " ".repeat(3),
         };
         let res = register(State(state.clone()), Json(req)).await;
         assert!(res.is_err());
@@ -150,7 +150,7 @@ mod tests {
         // Test with short password
         let req = RegisterRequest {
             username: "testuser".to_string(),
-            password: "short".to_string(),
+            password: "s".repeat(5),
         };
         let res = register(State(state.clone()), Json(req)).await;
         assert!(res.is_err());
