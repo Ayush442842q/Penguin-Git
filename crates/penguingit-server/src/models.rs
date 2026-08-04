@@ -18,6 +18,7 @@ pub struct UserPublic {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[allow(dead_code)]
 pub struct Token {
     pub token: String,
     pub user_id: Uuid,
@@ -55,6 +56,7 @@ pub struct Workspace {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[allow(dead_code)]
 pub struct WorkspaceMember {
     pub workspace_id: Uuid,
     pub user_id: Uuid,
