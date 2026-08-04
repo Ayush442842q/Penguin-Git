@@ -89,16 +89,11 @@ impl AnthropicProvider {
         if !status.is_success() {
             let status_code = status.as_u16();
             let body_text = response.text().await.unwrap_or_default();
-            let message = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body_text) {
-                json["error"]["message"]
-                    .as_str()
-                    .or_else(|| json["error"].as_str())
-                    .or_else(|| json["message"].as_str())
-                    .unwrap_or(&body_text)
-                    .to_string()
-            } else {
-                body_text
-            };
+            let message = serde_json::from_str::<AnthropicResponse>(&body_text)
+                .ok()
+                .and_then(|r| r.error)
+                .map(|e| e.message)
+                .unwrap_or(body_text);
             return Err(AiError::ApiError {
                 status: status_code,
                 message,
@@ -222,16 +217,11 @@ impl OpenAiProvider {
         if !status.is_success() {
             let status_code = status.as_u16();
             let body_text = response.text().await.unwrap_or_default();
-            let message = if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body_text) {
-                json["error"]["message"]
-                    .as_str()
-                    .or_else(|| json["error"].as_str())
-                    .or_else(|| json["message"].as_str())
-                    .unwrap_or(&body_text)
-                    .to_string()
-            } else {
-                body_text
-            };
+            let message = serde_json::from_str::<OpenAiResponse>(&body_text)
+                .ok()
+                .and_then(|r| r.error)
+                .map(|e| e.message)
+                .unwrap_or(body_text);
             return Err(AiError::ApiError {
                 status: status_code,
                 message,
