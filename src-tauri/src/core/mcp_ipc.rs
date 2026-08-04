@@ -1,12 +1,13 @@
 use rmcp::ServiceExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 use tokio::net::UnixListener;
 
 use crate::core::mcp_event::{get_event_bus, McpMutationEvent, UNIX_SOCKET_PATH};
 use crate::core::mcp_server::PenguinMcpServer;
+use crate::core::repo::AppState;
 
 pub static EMBEDDED_MCP_ENABLED: AtomicBool = AtomicBool::new(false);
 
@@ -83,8 +84,28 @@ fn emit_mcp_event(app: &AppHandle, tool: &str, repo_path: &str) {
     });
 
     let _ = app.emit(MCP_EVENT, &payload);
+
+    let repo_id = if let Some(state) = app.try_state::<AppState>() {
+        if let Ok(canon_path) = std::fs::canonicalize(repo_path) {
+            let repos = state.list();
+            repos
+                .iter()
+                .find(|r| {
+                    std::fs::canonicalize(&r.path)
+                        .map(|p| p == canon_path)
+                        .unwrap_or(false)
+                })
+                .map(|r| r.id.0.clone())
+                .unwrap_or_else(|| repo_path.to_string())
+        } else {
+            repo_path.to_string()
+        }
+    } else {
+        repo_path.to_string()
+    };
+
     let _ = app.emit(
         REPO_CHANGED_EVENT,
-        &serde_json::json!({ "repo_path": repo_path }),
+        &serde_json::json!({ "repoId": repo_id }),
     );
 }
