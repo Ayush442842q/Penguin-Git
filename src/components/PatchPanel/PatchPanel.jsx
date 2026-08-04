@@ -6,6 +6,7 @@ import {
   applyPatch,
   savePatchFile,
   pickPatchFile,
+  readPatchFile,
   writePatchFile,
 } from "../../services/tauriBridge";
 import "./PatchPanel.css";
@@ -55,19 +56,8 @@ export default function PatchPanel({ isOpen, onClose }) {
     try {
       const filePath = await pickPatchFile();
       if (!filePath) return;
-      // Read file content
-      // Using standard fetch file:// or FileReader if user picked via file input, or read via tauri.
-      // Let's allow either file picker or raw text input!
       setLoading(true);
-      // If we read via fetch(filePath):
-      const res = await fetch(`https://asset.localhost/${encodeURIComponent(filePath)}`).catch(
-        async () => {
-          // fallback if file protocol
-          const response = await window.fetch(`file://${filePath}`);
-          return response.text();
-        }
-      );
-      const text = typeof res === "string" ? res : await res.text();
+      const text = await readPatchFile(filePath);
       const prev = await previewPatch(activeRepoPath, text);
       setPreview({ ...prev, rawContent: text, fileName: filePath.split("/").pop() });
     } catch (err) {
