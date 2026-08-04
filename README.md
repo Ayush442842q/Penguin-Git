@@ -80,6 +80,12 @@ pnpm install && pnpm tauri dev
 
 Read [CONTRIBUTING.md](docs/CONTRIBUTING.md) first — it covers the rule that matters most: every git operation lives in `src-tauri/src/core/`, never inside a `#[tauri::command]`. Check the [roadmap](docs/ROADMAP.md) and open PRs before starting, to avoid duplicating an in-progress phase.
 
+## Security
+
+For security vulnerability notices or dependency audit findings:
+
+- react-router has been upgraded to v8.3.0+ to resolve the high-severity CSRF vulnerability (GHSA-qwww-vcr4-c8h2).
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
