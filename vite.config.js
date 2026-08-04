@@ -14,8 +14,10 @@ export default defineConfig(async () => ({
     port: 1420,
     strictPort: true,
     watch: {
-      // 3. tell vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // 3. tell vite to ignore watching `src-tauri` and the cargo workspace's
+      // shared build output (crates/penguingit-mcp, crates/penguingit-server
+      // also build into the repo-root `target/`, not just src-tauri's)
+      ignored: ["**/src-tauri/**", "**/target/**"],
     },
   },
 }));
