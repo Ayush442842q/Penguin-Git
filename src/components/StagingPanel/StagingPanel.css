@@ -1,6 +1,7 @@
 .staging-panel {
   width: var(--detail-w);
   flex-shrink: 0;
+  overflow: hidden;
   border-right: none;
   border-left: 1px solid var(--border-subtle);
 }

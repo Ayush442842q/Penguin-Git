@@ -1,6 +1,7 @@
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .sidebar-scroll {
