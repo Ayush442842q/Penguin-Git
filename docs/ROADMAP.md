@@ -4,7 +4,7 @@ PenguinGit is being built into a full local-first, Linux-native clone of GitKrak
 
 This is a living document. Check the boxes off as phases land; update the status column as work progresses.
 
-**Last updated:** 2026-08-05 · **Current phase:** 0 and 1 complete, 2 in progress (undo/redo shipped in v1.0.0; conflicts and interactive rebase remain)
+**Last updated:** 2026-08-05 · **Current phase:** 0 through 7 all have real, tested, UI-wired implementations. The one confirmed gap is worktree support (part of Phase 3) — see its row below.
 
 ## Guiding principles
 
@@ -16,16 +16,16 @@ This is a living document. Check the boxes off as phases land; update the status
 
 ## Phases
 
-| #   | Phase                                          | Goal                                                                                                                                                                   | Status         |
-| --- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 0   | Scaffolding & CI                               | Tooling, linting, testing, and CI foundation before any feature code                                                                                                   | ✅ Done        |
-| 1   | Core git engine & core UI                      | Status, staging, commit, log/graph, diff, branches, stash — done correctly, with a proper DAG lane-layout algorithm and no fragile text-parsing                        | ✅ Done        |
-| 2   | Merge conflicts, interactive rebase, undo/redo | The three hardest, most differentiating git UX flows                                                                                                                   | 🟡 In progress |
-| 3   | Multi-repo architecture & submodules           | Tabs, recent-repos, and submodule support (worktree support designed, not yet implemented)                                                                             | 🔜 Not started |
-| 4   | GitKraken MCP server                           | Standalone + embeddable MCP server over the shared core library, with live bidirectional events back to the GUI                                                        | 🔜 Not started |
-| 5   | AI features (bring-your-own key)               | Compose commits, explain commits/branches, PR descriptions — using your own Anthropic/OpenAI key                                                                       | 🔜 Not started |
-| 6   | GitHub integration & Launchpad                 | PAT-based GitHub auth, cross-repo PR/issue inbox, "start work on issue"                                                                                                | 🔜 Not started |
-| 7   | Self-hosted backend & cloud features           | Local-only patch export/import and workspace grouping always available; optional self-hosted Rust (Axum + Postgres) backend for shareable cloud patches and workspaces | 🔜 Not started |
+| #   | Phase                                          | Goal                                                                                                                                                                   | Status                          |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| 0   | Scaffolding & CI                               | Tooling, linting, testing, and CI foundation before any feature code                                                                                                   | ✅ Done                         |
+| 1   | Core git engine & core UI                      | Status, staging, commit, log/graph, diff, branches, stash — done correctly, with a proper DAG lane-layout algorithm and no fragile text-parsing                        | ✅ Done                         |
+| 2   | Merge conflicts, interactive rebase, undo/redo | The three hardest, most differentiating git UX flows                                                                                                                   | ✅ Done                         |
+| 3   | Multi-repo architecture & submodules           | Tabs, recent-repos, and submodule support                                                                                                                              | ✅ Done (worktrees not started) |
+| 4   | GitKraken MCP server                           | Standalone + embeddable MCP server over the shared core library, with live bidirectional events back to the GUI                                                        | ✅ Done                         |
+| 5   | AI features (bring-your-own key)               | Compose commits, explain commits/branches, PR descriptions — using your own Anthropic/OpenAI key                                                                       | ✅ Done                         |
+| 6   | GitHub integration & Launchpad                 | PAT-based GitHub auth, cross-repo PR/issue inbox, "start work on issue"                                                                                                | ✅ Done                         |
+| 7   | Self-hosted backend & cloud features           | Local-only patch export/import and workspace grouping always available; optional self-hosted Rust (Axum + Postgres) backend for shareable cloud patches and workspaces | ✅ Done                         |
 
 ### Phase 0 — done ✅
 
@@ -48,20 +48,58 @@ This is a living document. Check the boxes off as phases land; update the status
 - [x] Diff viewer with unified diff, file history, and blame annotations; staging, branch, and stash panels
 - [x] 73 Rust tests and 6 frontend tests
 
-### Phase 2 — next
+### Phase 2 — done ✅ (PR [#7](https://github.com/Ayush442842q/Penguin-Git/pull/7), 2026-08-02)
 
-Scope: a merge-conflict resolver whose resolutions are actually written to disk and staged (the prototype computed a result and discarded it), a visual interactive rebase built on a sequence-editor shim, and an undo/redo action journal.
+- [x] `core::conflict` — 3-way conflict resolution that's actually written to disk and staged (the pre-rewrite prototype computed a result and discarded it), path-traversal-guarded
+- [x] `core::rebase` — plain and interactive rebase (reorder/squash) built on a sequence-editor shim (`src-tauri/src/bin/sequence_editor.rs`)
+- [x] `core::merge_state` — detects in-progress merge/rebase, serializes operation state to the UI
+- [x] `core::undo` — undo/redo action journal covering commit (soft reset), checkout, branch delete, and merge (completed-merge `ORIG_HEAD` reset and mid-merge `merge --abort`)
+- [x] UI: `ConflictEditor`, `RebaseDialog`, global `Ctrl+Z`/`Cmd+Z` shortcut and toast (`UndoToast`)
+- [x] 15 Rust tests across the four modules
 
-See [CHANGELOG.md](CHANGELOG.md) for the detailed record of what shipped.
+### Phase 3 — done ✅ (PR [#8](https://github.com/Ayush442842q/Penguin-Git/pull/8), 2026-08-02) — worktrees not started
+
+- [x] `core::repo_registry` — SQLite-backed registry of open/recent repos, tab switcher (`RepoTabs`)
+- [x] `core::workspace` — grouping repos into named workspaces (`Workspaces` UI, a tab in the launcher)
+- [x] `core::submodule` — `.gitmodules` and submodule-status parsing (`SubmodulePanel`)
+- [ ] `core::worktree` — still exactly what it was: a design-only doc comment (`src-tauri/src/core/worktree.rs`) specifying a future API shape. No commands, no UI. This is the one real gap left in the whole roadmap.
+
+### Phase 4 — done ✅ (PR [#9](https://github.com/Ayush442842q/Penguin-Git/pull/9), 2026-08-02)
+
+- [x] `core::mcp_server` — 18 `#[tool]`-annotated methods covering the full git workflow (log, status, diff, stage/unstage, commit, checkout, fetch/pull/push, branches, stashes, discard)
+- [x] `core::mcp_ipc` + `core::mcp_event` — Unix-socket IPC and an in-process event bus, so MCP-driven mutations reflect live in the GUI
+- [x] `crates/penguingit-mcp` — the standalone binary, `stdio()` transport, wrapping the exact same server the embedded/GUI path uses
+- [x] `McpPanel` UI to enable/disable the embedded server
+
+### Phase 5 — done ✅ (PR [#10](https://github.com/Ayush442842q/Penguin-Git/pull/10), 2026-08-02)
+
+- [x] `core::ai` — a provider abstraction (`AiProvider::complete`) over your own Anthropic/OpenAI key, stored in the OS keychain
+- [x] Compose commit message, explain commit, explain branch, generate PR description
+- [x] UI: compose button in `StagingPanel`, `ExplainCommitModal`, `ExplainBranchModal`, `PrDescriptionModal`
+
+### Phase 6 — done ✅ (PR [#11](https://github.com/Ayush442842q/Penguin-Git/pull/11), 2026-08-03)
+
+- [x] `github/client.rs` — PAT-based GitHub auth, PAT stored in the OS keychain
+- [x] `Launchpad` — cross-repo PR/issue inbox, categorized into Needs Review / Your PRs / Ready to Merge / Issues
+- [x] "Start work on issue" — creates a branch and checks it out from a Launchpad issue
+
+### Phase 7 — done ✅ (PR [#12](https://github.com/Ayush442842q/Penguin-Git/pull/12), 2026-08-03)
+
+- [x] `crates/penguingit-server` — Axum + Postgres (`sqlx`) backend: auth (Argon2 + opaque tokens), patches, workspaces, migrations run automatically on startup
+- [x] `core::cloud::client` — the desktop-side HTTP client, token stored in the OS keychain
+- [x] UI: Settings → Cloud Workspaces (`CloudPanel`), `CloudPatches` panel
+- [x] Self-hosting documented on the [wiki](https://github.com/Ayush442842q/Penguin-Git/wiki/Cloud-Server-Setup) — this backend is optional and not bundled with the desktop app
+
+See [CHANGELOG.md](CHANGELOG.md) for the detailed record of what shipped, phase by phase.
 
 ## Explicitly deferred
 
-The following are intentionally out of scope for the phases above, with the seams left in place to add them cheaply later:
+The following are intentionally out of scope, with the seams left in place to add them cheaply later:
 
 - **GitLab integration** — GitHub ships first; a provider-agnostic client trait means adding GitLab later doesn't require frontend rework.
 - **Jira / Trello / Azure Boards integration** — third-layer integrations, lowest priority.
-- **Focus View** (Kanban-style board) — builds on Launchpad + workspace scoping once both exist independently.
-- **Worktree implementation** — the data model accommodates it from Phase 3 onward, but the feature itself ships later, once there's a real multi-repo UI to attach it to.
+- **Focus View** (Kanban-style board) — builds on Launchpad + workspace scoping, both of which now exist independently.
+- **Worktree implementation** — the one confirmed gap; the data model accommodates it, `core/worktree.rs` documents the intended API, but no commands or UI exist yet.
 
 ## Architecture decisions
 

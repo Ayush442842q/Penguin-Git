@@ -2,17 +2,23 @@
 
 All notable changes to this project are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). As of v1.0.0 this project follows [semver](https://semver.org/); versions before v1.0.0 tracked the build phases in [ROADMAP.md](ROADMAP.md) instead, since the API and UX were still settling.
 
-## [Unreleased] — Phase 2: Merge conflicts, interactive rebase
+## [Unreleased]
 
-Undo/redo landed as part of v1.0.0 (see below); a visual merge-conflict resolver and interactive rebase are still outstanding. See [ROADMAP.md](ROADMAP.md#phases) for scope.
+Nothing currently in flight. The only confirmed gap versus the full Phase 0–7 scope is worktree support (part of Phase 3) — see [ROADMAP.md](ROADMAP.md#phases).
 
 ## v1.0.0 — First stable release (2026-08-05)
 
-The Phase 0 + Phase 1 feature set from v0.1.0, hardened: an undo/redo action journal, local patch import/export, workspace role enforcement, and a round of security and dependency fixes.
+**Correction (2026-08-05):** this entry originally said "The Phase 0 + Phase 1 feature set from
+v0.1.0, hardened" and listed the undo/redo journal as newly added. Both were wrong — v0.1.0
+already had Phases 0 through 7 (see the correction on that entry below), including undo/redo,
+merge conflict resolution, and interactive rebase. `git diff v0.1.0 v1.0.0 -- src-tauri/src/core/undo.rs`
+is empty; the only undo/redo change in this release is scoping the journal per repository. This
+is a hardening pass over the existing Phase 0–7 feature set, not a Phase 0+1 release: workspace
+role enforcement, local patch import/export, and a round of security and dependency fixes.
 
 ### Added
 
-- Undo/redo action journal, scoped per repository, recording branch delete/checkout/merge and commit only after the underlying git operation actually succeeds (no phantom entries on a failed op)
+- Undo/redo journal scoped per repository (previously a single global journal shared across every open repo)
 - Local patch import/export via custom Rust file read/write commands (`read_patch_file` / `write_patch_file`), replacing the previous browser-only file APIs
 - Workspace owner/member role enforcement on the self-hosted backend's workspace routes
 - `repoId`-based `repo-changed` event payloads (previously path-based), and camelCase serde renaming across server models for frontend consistency
@@ -39,7 +45,12 @@ The Phase 0 + Phase 1 feature set from v0.1.0, hardened: an undo/redo action jou
 
 ## v0.1.0 — First release (2026-08-03)
 
-The Phase 0 + Phase 1 feature set, packaged for the first time.
+**Correction (2026-08-05):** this entry originally said "the Phase 0 + Phase 1 feature set." That
+was wrong the day it was written — `git show v0.1.0:src-tauri/src/core/undo.rs` (and
+`mcp_server.rs`, `cloud/client.rs`, `github/client.rs`, ...) confirms Phases 2 through 7 were
+already in the tagged commit. The release notes just never caught up to what had actually shipped.
+See the Phase 2–7 entries below, all dated before or on this tag, for what v0.1.0 actually
+contained.
 
 ### Added
 
@@ -47,6 +58,63 @@ The Phase 0 + Phase 1 feature set, packaged for the first time.
 - `license = "MIT"` in `src-tauri/Cargo.toml` so bundle metadata carries a real license instead of an empty field
 - `git` declared as an RPM runtime dependency (`bundle.linux.rpm.depends`), matching the existing `.deb` dependency
 - README install instructions for the packaged `.rpm` / `.deb`
+
+## Phase 7 — Self-hosted backend & cloud features (2026-08-03)
+
+### Added
+
+- `crates/penguingit-server` — Axum + Postgres (`sqlx`) backend: auth (Argon2 password hashing, opaque bearer tokens), patches, workspaces. Migrations run automatically on startup
+- `core::cloud::client` — the desktop-side HTTP client; server URL and token stored in the OS keychain via `keyring`
+- Settings → Cloud Workspaces (`CloudPanel`) and the `CloudPatches` panel
+- Self-hosting documented on the [wiki](https://github.com/Ayush442842q/Penguin-Git/wiki/Cloud-Server-Setup): role/database setup, `pg_hba.conf` password-auth fix, running the server, registering an account. This backend is optional and not bundled with the desktop `.rpm`/`.deb`
+
+## Phase 6 — GitHub integration & Launchpad (2026-08-03)
+
+### Added
+
+- `github::client` — PAT-based GitHub auth, token stored in the OS keychain
+- `Launchpad` — a cross-repo PR/issue inbox categorized into Needs Review, Your PRs, Ready to Merge, and Issues
+- "Start work on issue" — creates a branch and checks it out directly from a Launchpad issue
+
+## Phase 5 — AI features, bring-your-own-key (2026-08-02)
+
+### Added
+
+- `core::ai` — a provider abstraction (`AiProvider::complete`) over your own Anthropic/OpenAI API key, stored in the OS keychain. PenguinGit never runs or proxies its own AI inference
+- Compose commit message, explain commit, explain branch, generate PR description
+- UI: compose button in `StagingPanel`; `ExplainCommitModal`, `ExplainBranchModal`, `PrDescriptionModal`
+
+## Phase 4 — GitKraken MCP server (2026-08-02)
+
+### Added
+
+- `core::mcp_server` — 18 `#[tool]`-annotated methods covering the full git workflow: log, status, diff, commit-diff, stage/unstage, commit, checkout, fetch, pull, push, list/create/delete branch, list/save/pop stash, discard changes
+- `core::mcp_ipc` + `core::mcp_event` — Unix-socket IPC and an in-process broadcast event bus, so tool-driven mutations reflect live in the GUI without polling
+- `crates/penguingit-mcp` — a standalone binary (`stdio()` transport) wrapping the exact same server the embedded/GUI path uses
+- `McpPanel` — Settings UI to enable/disable the embedded server
+
+## Phase 3 — Multi-repo architecture & submodules (2026-08-02)
+
+### Added
+
+- `core::repo_registry` — SQLite-backed registry of open and recently-opened repos, driving the `RepoTabs` tab switcher
+- `core::workspace` — grouping repos into named workspaces (`Workspaces` UI, a tab in the launcher alongside Recent)
+- `core::submodule` — `.gitmodules` and submodule-status parsing, `SubmodulePanel`
+
+### Known gap
+
+- `core::worktree` is design-only — a doc comment specifying the intended API (`list_worktrees`, `add_worktree`, `remove_worktree`), zero implementation, no commands, no UI. Deliberately deferred; see `docs/ROADMAP.md`
+
+## Phase 2 — Merge conflicts, interactive rebase, undo/redo (2026-08-02)
+
+### Added
+
+- `core::conflict` — 3-way conflict resolution whose resolutions are actually written to disk and staged (the pre-rewrite prototype computed a result and discarded it), path-traversal-guarded
+- `core::rebase` — plain and interactive rebase (reorder/squash), built on a sequence-editor shim binary (`src-tauri/src/bin/sequence_editor.rs`)
+- `core::merge_state` — detects an in-progress merge or rebase and serializes the operation state to the UI
+- `core::undo` — an undo/redo action journal covering commit (soft reset), checkout, branch delete, and merge (both completed-merge `ORIG_HEAD` reset and mid-merge `merge --abort`)
+- UI: `ConflictEditor`, `RebaseDialog`, a global `Ctrl+Z`/`Cmd+Z` shortcut and toast (`UndoToast`)
+- 15 Rust tests across the four modules, against real fixture repositories
 
 ## Phase 1 — Core git engine & core UI (2026-08-01)
 
