@@ -65,12 +65,7 @@ function UnifiedDiff({ text, filePath, canStageHunks, onStageHunk }) {
       headerLines.push(`+++ b/${filePath}`);
     }
 
-    const patch = [
-      ...headerLines,
-      hunkHeader,
-      ...hunkLines,
-      "",
-    ].join("\n");
+    const patch = [...headerLines, hunkHeader, ...hunkLines, ""].join("\n");
     onStageHunk(patch);
   };
 
