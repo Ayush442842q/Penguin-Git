@@ -45,6 +45,7 @@ pub struct AnthropicProvider {
     pub model: String,
     pub api_key: String,
     pub client: reqwest::Client,
+    pub base_url: String,
 }
 
 impl AnthropicProvider {
@@ -53,6 +54,7 @@ impl AnthropicProvider {
             model,
             api_key,
             client: reqwest::Client::new(),
+            base_url: "https://api.anthropic.com".to_string(),
         }
     }
 
@@ -71,9 +73,10 @@ impl AnthropicProvider {
             max_tokens: 1024,
         };
 
+        let url = format!("{}/v1/messages", self.base_url);
         let response = self
             .client
-            .post("https://api.anthropic.com/v1/messages")
+            .post(&url)
             .header("x-api-key", &self.api_key)
             .header("anthropic-version", "2023-06-01")
             .header("content-type", "application/json")
@@ -82,22 +85,25 @@ impl AnthropicProvider {
             .await
             .map_err(|e| AiError::Network(e.to_string()))?;
 
-        let status = response.status().as_u16();
+        let status = response.status();
+        if !status.is_success() {
+            let status_code = status.as_u16();
+            let body_text = response.text().await.unwrap_or_default();
+            let message = serde_json::from_str::<AnthropicResponse>(&body_text)
+                .ok()
+                .and_then(|r| r.error)
+                .map(|e| e.message)
+                .unwrap_or(body_text);
+            return Err(AiError::ApiError {
+                status: status_code,
+                message,
+            });
+        }
+
         let body: AnthropicResponse = response
             .json()
             .await
             .map_err(|e| AiError::Network(format!("Failed to parse response: {e}")))?;
-
-        if status != 200 {
-            let msg = body
-                .error
-                .map(|e| e.message)
-                .unwrap_or_else(|| format!("HTTP status {status}"));
-            return Err(AiError::ApiError {
-                status,
-                message: msg,
-            });
-        }
 
         let content_blocks = body
             .content
@@ -163,6 +169,7 @@ pub struct OpenAiProvider {
     pub model: String,
     pub api_key: String,
     pub client: reqwest::Client,
+    pub base_url: String,
 }
 
 impl OpenAiProvider {
@@ -171,6 +178,7 @@ impl OpenAiProvider {
             model,
             api_key,
             client: reqwest::Client::new(),
+            base_url: "https://api.openai.com".to_string(),
         }
     }
 
@@ -194,9 +202,10 @@ impl OpenAiProvider {
             max_tokens: 1024,
         };
 
+        let url = format!("{}/v1/chat/completions", self.base_url);
         let response = self
             .client
-            .post("https://api.openai.com/v1/chat/completions")
+            .post(&url)
             .header("authorization", format!("Bearer {}", self.api_key))
             .header("content-type", "application/json")
             .json(&payload)
@@ -204,22 +213,25 @@ impl OpenAiProvider {
             .await
             .map_err(|e| AiError::Network(e.to_string()))?;
 
-        let status = response.status().as_u16();
+        let status = response.status();
+        if !status.is_success() {
+            let status_code = status.as_u16();
+            let body_text = response.text().await.unwrap_or_default();
+            let message = serde_json::from_str::<OpenAiResponse>(&body_text)
+                .ok()
+                .and_then(|r| r.error)
+                .map(|e| e.message)
+                .unwrap_or(body_text);
+            return Err(AiError::ApiError {
+                status: status_code,
+                message,
+            });
+        }
+
         let body: OpenAiResponse = response
             .json()
             .await
             .map_err(|e| AiError::Network(format!("Failed to parse response: {e}")))?;
-
-        if status != 200 {
-            let msg = body
-                .error
-                .map(|e| e.message)
-                .unwrap_or_else(|| format!("HTTP status {status}"));
-            return Err(AiError::ApiError {
-                status,
-                message: msg,
-            });
-        }
 
         if let Some(choices) = body.choices {
             if let Some(choice) = choices.first() {
@@ -279,4 +291,65 @@ struct OpenAiErrorDetail {
 struct OpenAiResponse {
     choices: Option<Vec<OpenAiChoice>>,
     error: Option<OpenAiErrorDetail>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_anthropic_non_200_returns_apierror() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                use tokio::io::AsyncWriteExt;
+                let response = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Invalid API key for Anthropic\"}}";
+                let _ = stream.write_all(response.as_bytes()).await;
+                let _ = stream.shutdown().await;
+            }
+        });
+
+        let mut provider = AnthropicProvider::new("claude-3-opus".to_string(), "key".to_string());
+        provider.base_url = format!("http://127.0.0.1:{port}");
+
+        let res = provider.complete("sys", "user").await;
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            AiError::ApiError { status, message } => {
+                assert_eq!(status, 400);
+                assert_eq!(message, "Invalid API key for Anthropic");
+            }
+            other => panic!("Expected ApiError, got {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_openai_non_200_returns_apierror() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                use tokio::io::AsyncWriteExt;
+                let response = "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"error\":{\"message\":\"Invalid API key for OpenAI\"}}";
+                let _ = stream.write_all(response.as_bytes()).await;
+                let _ = stream.shutdown().await;
+            }
+        });
+
+        let mut provider = OpenAiProvider::new("gpt-4".to_string(), "key".to_string());
+        provider.base_url = format!("http://127.0.0.1:{port}");
+
+        let res = provider.complete("sys", "user").await;
+        assert!(res.is_err());
+        match res.unwrap_err() {
+            AiError::ApiError { status, message } => {
+                assert_eq!(status, 401);
+                assert_eq!(message, "Invalid API key for OpenAI");
+            }
+            other => panic!("Expected ApiError, got {:?}", other),
+        }
+    }
 }
