@@ -40,7 +40,7 @@ pub fn pop_stash(
     index: usize,
     hash: String,
 ) -> Result<(), String> {
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::StashPop {
             stash_name: format!("stash@{{{index}}}"),
         },
