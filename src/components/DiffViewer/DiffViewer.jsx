@@ -50,14 +50,22 @@ function UnifiedDiff({ text, filePath, canStageHunks, onStageHunk }) {
       if (lines[i].startsWith("@@") || lines[i].startsWith("diff ")) break;
       hunkLines.push(lines[i]);
     }
-    const patch = [
-      `diff --git a/${filePath} b/${filePath}`,
-      `--- a/${filePath}`,
-      `+++ b/${filePath}`,
-      hunkHeader,
-      ...hunkLines,
-      "",
-    ].join("\n");
+
+    // Extract headers dynamically from the original diff (lines from 0 to first @@)
+    const headerLines = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith("@@")) break;
+      headerLines.push(lines[i]);
+    }
+
+    // Fallback to synthetic headers only if no header lines were found in the diff
+    if (headerLines.length === 0) {
+      headerLines.push(`diff --git a/${filePath} b/${filePath}`);
+      headerLines.push(`--- a/${filePath}`);
+      headerLines.push(`+++ b/${filePath}`);
+    }
+
+    const patch = [...headerLines, hunkHeader, ...hunkLines, ""].join("\n");
     onStageHunk(patch);
   };
 
@@ -298,7 +306,7 @@ export default function DiffViewer() {
           <UnifiedDiff
             text={fresh.diff}
             filePath={isFile ? target.path : null}
-            canStageHunks={isFile && !target.staged && !target.untracked}
+            canStageHunks={isFile && !target.staged}
             onStageHunk={(patch) => useRepoStore.getState().stageHunk(patch)}
           />
         ) : tab === "history" ? (
