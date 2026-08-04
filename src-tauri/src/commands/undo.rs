@@ -40,7 +40,9 @@ pub fn get_undo_history(
         let repo = state
             .get(&id)
             .ok_or_else(|| format!("Unknown repository: {}", id.as_str()))?;
-        Ok(state.get_journal(&repo.path.to_string_lossy()).get_history())
+        Ok(state
+            .get_journal(&repo.path.to_string_lossy())
+            .get_history())
     } else {
         Ok(Vec::new())
     }
@@ -55,7 +57,9 @@ pub fn get_redo_history(
         let repo = state
             .get(&id)
             .ok_or_else(|| format!("Unknown repository: {}", id.as_str()))?;
-        Ok(state.get_journal(&repo.path.to_string_lossy()).get_redo_history())
+        Ok(state
+            .get_journal(&repo.path.to_string_lossy())
+            .get_redo_history())
     } else {
         Ok(Vec::new())
     }

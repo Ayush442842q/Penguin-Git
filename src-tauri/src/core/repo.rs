@@ -361,4 +361,3 @@ mod tests {
         assert_eq!(journal2.get_history().len(), 0);
     }
 }
-
