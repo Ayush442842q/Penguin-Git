@@ -3,7 +3,6 @@ use argon2::{
     Argon2,
 };
 use axum::{
-    async_trait,
     extract::{FromRef, FromRequestParts},
     http::{header, request::Parts},
 };
@@ -20,7 +19,6 @@ pub struct AuthUser {
     pub token: String,
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for AuthUser
 where
     Arc<AppState>: FromRef<S>,
