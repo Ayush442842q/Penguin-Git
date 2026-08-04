@@ -35,7 +35,9 @@ pub fn delete_branch(
         .trim()
         .to_string();
 
-    state.journal.record(
+    branch::delete_branch(p, &name, force).map_err(to_ipc_error)?;
+
+    state.get_journal(&repo_path).record(
         ActionType::BranchDelete {
             branch_name: name.clone(),
             target_hash,
@@ -43,7 +45,7 @@ pub fn delete_branch(
         format!("Delete branch {name}"),
     );
 
-    branch::delete_branch(p, &name, force).map_err(to_ipc_error)
+    Ok(())
 }
 
 #[tauri::command]
@@ -63,12 +65,14 @@ pub fn checkout(
         .trim()
         .to_string();
 
-    state.journal.record(
+    branch::checkout(p, &target).map_err(to_ipc_error)?;
+
+    state.get_journal(&repo_path).record(
         ActionType::Checkout { previous_ref },
         format!("Checkout {target}"),
     );
 
-    branch::checkout(p, &target).map_err(to_ipc_error)
+    Ok(())
 }
 
 #[tauri::command]
@@ -84,12 +88,14 @@ pub fn checkout_new_branch(
         .trim()
         .to_string();
 
-    state.journal.record(
+    branch::checkout_new(p, &name, start_point.as_deref()).map_err(to_ipc_error)?;
+
+    state.get_journal(&repo_path).record(
         ActionType::Checkout { previous_ref },
         format!("Checkout new branch {name}"),
     );
 
-    branch::checkout_new(p, &name, start_point.as_deref()).map_err(to_ipc_error)
+    Ok(())
 }
 
 #[tauri::command]
@@ -104,15 +110,20 @@ pub fn merge_branch(
         .trim()
         .to_string();
 
-    state.journal.record(
-        ActionType::Merge {
-            previous_head,
-            target_ref: branch_name.clone(),
-        },
-        format!("Merge branch {branch_name}"),
-    );
+    let res = branch::merge_branch(p, &branch_name).map_err(to_ipc_error);
 
-    branch::merge_branch(p, &branch_name).map_err(to_ipc_error)
+    let state_detector = crate::core::merge_state::detect_operation_state(p);
+    if res.is_ok() || state_detector.kind == Some(crate::core::merge_state::OperationKind::Merge) {
+        state.get_journal(&repo_path).record(
+            ActionType::Merge {
+                previous_head,
+                target_ref: branch_name.clone(),
+            },
+            format!("Merge branch {branch_name}"),
+        );
+    }
+
+    res
 }
 
 #[tauri::command]

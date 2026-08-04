@@ -127,8 +127,20 @@ describe("tauriBridge", () => {
         "redo_last_action",
         { repoId: { 0: "r1" } },
       ],
-      ["getUndoHistory", () => git.getUndoHistory(), "get_undo_history", undefined],
-      ["getRedoHistory", () => git.getRedoHistory(), "get_redo_history", undefined],
+      ["getUndoHistory", () => git.getUndoHistory(), "get_undo_history", {}],
+      ["getRedoHistory", () => git.getRedoHistory(), "get_redo_history", {}],
+      [
+        "getUndoHistory scoped",
+        () => git.getUndoHistory("r1"),
+        "get_undo_history",
+        { repoId: { 0: "r1" } },
+      ],
+      [
+        "getRedoHistory scoped",
+        () => git.getRedoHistory("r1"),
+        "get_redo_history",
+        { repoId: { 0: "r1" } },
+      ],
     ];
 
     it.each(cases)("%s", (_name, call, expectedCommand, expectedArgs) => {
