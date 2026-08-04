@@ -108,6 +108,26 @@
 .app-center .commit-graph {
   flex: 0 0 var(--graph-h, 55%);
   min-height: 0;
+  overflow: hidden;
+}
+
+.panel-toggles {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 6px;
+  margin-right: 6px;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.icon-toggle {
+  padding: 4px 7px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.icon-toggle.active {
+  color: var(--accent-purple);
 }
 
 .app-center .diff-viewer {

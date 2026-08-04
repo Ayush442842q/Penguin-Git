@@ -17,7 +17,7 @@ import McpPanel from "./components/McpPanel/McpPanel";
 import Launchpad from "./components/Launchpad/Launchpad";
 import "./App.css";
 
-function Header() {
+function Header({ panels }) {
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const slice = useRepoStore((s) => s.repos[activeRepoId]);
   const busy = useRepoStore((s) => s.busy);
@@ -50,6 +50,34 @@ function Header() {
         <RepoTabs />
 
         <div className="app-header-right">
+          {panels && (
+            <div className="panel-toggles">
+              <button
+                className={`ghost icon-toggle${panels.sidebar.collapsed ? " active" : ""}`}
+                onClick={panels.sidebar.toggleCollapsed}
+                title={panels.sidebar.collapsed ? "Show sidebar" : "Hide sidebar"}
+                aria-label={panels.sidebar.collapsed ? "Show sidebar" : "Hide sidebar"}
+              >
+                ◧
+              </button>
+              <button
+                className={`ghost icon-toggle${panels.graph.collapsed ? " active" : ""}`}
+                onClick={panels.graph.toggleCollapsed}
+                title={panels.graph.collapsed ? "Show commit graph" : "Hide commit graph"}
+                aria-label={panels.graph.collapsed ? "Show commit graph" : "Hide commit graph"}
+              >
+                ⬒
+              </button>
+              <button
+                className={`ghost icon-toggle${panels.detail.collapsed ? " active" : ""}`}
+                onClick={panels.detail.toggleCollapsed}
+                title={panels.detail.collapsed ? "Show detail panel" : "Hide detail panel"}
+                aria-label={panels.detail.collapsed ? "Show detail panel" : "Hide detail panel"}
+              >
+                ◨
+              </button>
+            </div>
+          )}
           <button className="ghost" onClick={() => setShowLaunchpad(true)} title="Launchpad">
             🚀 Launchpad
           </button>
@@ -174,24 +202,47 @@ function RepoView() {
   return (
     <div
       className="app-shell"
-      style={{ "--sidebar-w": `${sidebar.size}px`, "--detail-w": `${detail.size}px` }}
+      style={{
+        "--sidebar-w": `${sidebar.collapsed ? 0 : sidebar.size}px`,
+        "--detail-w": `${detail.collapsed ? 0 : detail.size}px`,
+      }}
     >
-      <Header />
+      <Header panels={{ sidebar, detail, graph }} />
       <div className="app-body">
         <Sidebar />
-        <ResizeHandle axis="x" onPointerDown={sidebar.onPointerDown} />
+        <ResizeHandle
+          axis="x"
+          onPointerDown={sidebar.onPointerDown}
+          collapsed={sidebar.collapsed}
+          onToggleCollapse={sidebar.toggleCollapsed}
+          collapseDirection="start"
+          label="sidebar"
+        />
         <div className="app-center">
           {hasConflict ? (
             <ConflictEditor path={activeConflictPath} />
           ) : (
             <>
-              <CommitGraph style={{ "--graph-h": `${graph.size}px` }} />
-              <ResizeHandle axis="y" onPointerDown={graph.onPointerDown} />
+              <CommitGraph style={{ "--graph-h": graph.collapsed ? "0px" : `${graph.size}px` }} />
+              <ResizeHandle
+                axis="y"
+                onPointerDown={graph.onPointerDown}
+                collapsed={graph.collapsed}
+                onToggleCollapse={graph.toggleCollapsed}
+                label="commit graph"
+              />
               <DiffViewer />
             </>
           )}
         </div>
-        <ResizeHandle axis="x" onPointerDown={detail.onPointerDown} />
+        <ResizeHandle
+          axis="x"
+          onPointerDown={detail.onPointerDown}
+          collapsed={detail.collapsed}
+          onToggleCollapse={detail.toggleCollapsed}
+          collapseDirection="end"
+          label="detail panel"
+        />
         <StagingPanel />
       </div>
       <StatusBar />
