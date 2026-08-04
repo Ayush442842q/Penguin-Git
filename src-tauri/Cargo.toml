@@ -1,10 +1,11 @@
 [package]
 name = "penguingit"
-version = "0.1.0"
+version = "1.0.0"
 description = "A premium, open-source Git GUI built exclusively for Linux."
 authors = ["PenguinGit Contributors"]
 license = "MIT"
 edition = "2021"
+default-run = "penguingit"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
