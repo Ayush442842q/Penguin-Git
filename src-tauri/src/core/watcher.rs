@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use notify::{Event, RecursiveMode, Watcher};
+use notify::{Event, EventKind, RecursiveMode, Watcher};
 use serde::{Deserialize, Serialize};
 
 /// Event name emitted to the frontend when a repository changes on disk.
@@ -18,6 +19,29 @@ pub const REPO_CHANGED_EVENT: &str = "repo-changed";
 /// for one logical operation.
 const DEBOUNCE: Duration = Duration::from_millis(250);
 
+/// Directories that hold build/dependency output, not source.
+///
+/// A single blanket `RecursiveMode::Recursive` watch on the whole repo used to
+/// include these — on any repo with an active build (`cargo build` writing
+/// continuously into `target/`, `pnpm install` populating `node_modules/`),
+/// the resulting flood of inotify events pegs a CPU core and can make the
+/// whole app appear to hang.
+const EXCLUDED_DIR_NAMES: &[&str] = &[
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "vendor",
+    ".next",
+    ".nuxt",
+    "out",
+    ".cache",
+    ".turbo",
+];
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoChanged {
@@ -30,35 +54,103 @@ pub struct RepoChanged {
 ///
 /// Dropping the returned handle stops the watcher.
 pub struct RepoWatcher {
-    _watcher: notify::RecommendedWatcher,
+    _watcher: Arc<Mutex<notify::RecommendedWatcher>>,
 }
 
 impl RepoWatcher {
     /// Starts watching `repo_path`.
     ///
-    /// Watches the working tree and `.git` together, recursively: the
-    /// interesting paths (`.git/HEAD`, `.git/refs`, `.git/index`) are all under
-    /// `.git`, and file edits happen in the tree. Events are filtered and
-    /// debounced on a background thread before `on_change` fires.
+    /// `.git` is watched narrowly — just the top-level files (`HEAD`, `index`,
+    /// `packed-refs`, ...) and `refs/` recursively, never `objects/` — and the
+    /// working tree is walked and watched directory-by-directory, skipping
+    /// [`EXCLUDED_DIR_NAMES`]. New directories are picked up as they're
+    /// created (unless excluded) so a `git checkout` of a new branch or an
+    /// `mkdir` still gets watched. Events are filtered and debounced on a
+    /// background thread before `on_change` fires.
     pub fn start<F>(repo_path: &Path, on_change: F) -> notify::Result<Self>
     where
         F: Fn() + Send + 'static,
     {
         let (tx, rx) = mpsc::channel::<Event>();
 
-        let mut watcher = notify::recommended_watcher(move |res: notify::Result<Event>| {
+        let watcher = notify::recommended_watcher(move |res: notify::Result<Event>| {
             if let Ok(event) = res {
                 // A closed receiver just means the watcher is shutting down.
                 let _ = tx.send(event);
             }
         })?;
-
-        watcher.watch(repo_path, RecursiveMode::Recursive)?;
+        let watcher = Arc::new(Mutex::new(watcher));
 
         let git_dir = repo_path.join(".git");
-        std::thread::spawn(move || debounce_loop(rx, git_dir, on_change));
+        watch_git_dir(&watcher, &git_dir)?;
+        watch_tree(&watcher, repo_path, &git_dir);
+
+        let watcher_for_thread = Arc::clone(&watcher);
+        std::thread::spawn(move || debounce_loop(rx, git_dir, watcher_for_thread, on_change));
 
         Ok(Self { _watcher: watcher })
+    }
+}
+
+fn watch_git_dir(
+    watcher: &Arc<Mutex<notify::RecommendedWatcher>>,
+    git_dir: &Path,
+) -> notify::Result<()> {
+    if !git_dir.is_dir() {
+        return Ok(());
+    }
+    let mut w = watcher.lock().unwrap();
+    // HEAD, index, packed-refs, MERGE_HEAD, REBASE_HEAD all live directly here.
+    w.watch(git_dir, RecursiveMode::NonRecursive)?;
+    let refs = git_dir.join("refs");
+    if refs.is_dir() {
+        w.watch(&refs, RecursiveMode::Recursive)?;
+    }
+    Ok(())
+}
+
+/// Recursively watches `dir`, one directory at a time, skipping `.git` (handled
+/// separately by [`watch_git_dir`]) and [`EXCLUDED_DIR_NAMES`].
+fn watch_tree(watcher: &Arc<Mutex<notify::RecommendedWatcher>>, dir: &Path, git_dir: &Path) {
+    {
+        let mut w = watcher.lock().unwrap();
+        let _ = w.watch(dir, RecursiveMode::NonRecursive);
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path == *git_dir || path.is_symlink() || !path.is_dir() {
+            continue;
+        }
+        if is_excluded_dir(&path) {
+            continue;
+        }
+        watch_tree(watcher, &path, git_dir);
+    }
+}
+
+fn is_excluded_dir(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|name| EXCLUDED_DIR_NAMES.contains(&name))
+}
+
+/// Extends watches to cover directories created after startup (e.g. a fresh
+/// `git checkout` or `mkdir`), so they aren't silently unwatched.
+fn watch_new_dirs(event: &Event, watcher: &Arc<Mutex<notify::RecommendedWatcher>>, git_dir: &Path) {
+    if !matches!(event.kind, EventKind::Create(_)) {
+        return;
+    }
+    for path in &event.paths {
+        if path.starts_with(git_dir) || path.is_symlink() || !path.is_dir() {
+            continue;
+        }
+        if is_excluded_dir(path) {
+            continue;
+        }
+        watch_tree(watcher, path, git_dir);
     }
 }
 
@@ -66,12 +158,18 @@ impl RepoWatcher {
 ///
 /// Waits for a first relevant event, then keeps draining until the filesystem
 /// has been quiet for [`DEBOUNCE`], so one git operation produces one refresh.
-fn debounce_loop<F: Fn()>(rx: mpsc::Receiver<Event>, git_dir: PathBuf, on_change: F) {
+fn debounce_loop<F: Fn()>(
+    rx: mpsc::Receiver<Event>,
+    git_dir: PathBuf,
+    watcher: Arc<Mutex<notify::RecommendedWatcher>>,
+    on_change: F,
+) {
     while let Ok(event) = rx.recv() {
+        watch_new_dirs(&event, &watcher, &git_dir);
+
         if !is_relevant(&event, &git_dir) {
             continue;
         }
-
         let deadline = Instant::now() + DEBOUNCE;
         loop {
             let remaining = deadline.saturating_duration_since(Instant::now());
@@ -79,7 +177,10 @@ fn debounce_loop<F: Fn()>(rx: mpsc::Receiver<Event>, git_dir: PathBuf, on_change
                 break;
             }
             match rx.recv_timeout(remaining) {
-                Ok(_) => continue,
+                Ok(event) => {
+                    watch_new_dirs(&event, &watcher, &git_dir);
+                    continue;
+                }
                 // Quiet for the full window, or the sender is gone.
                 Err(_) => break,
             }
@@ -95,6 +196,13 @@ fn debounce_loop<F: Fn()>(rx: mpsc::Receiver<Event>, git_dir: PathBuf, on_change
 /// refresh — and worse, the refresh itself can touch the repo, producing a
 /// feedback loop that never settles.
 fn is_relevant(event: &Event, git_dir: &Path) -> bool {
+    // Pure access (open/read) events carry no information about a repo
+    // actually changing — only mutations do. Watch registration itself can
+    // generate these, so without this check a watcher could refresh on
+    // nothing but its own setup.
+    if matches!(event.kind, EventKind::Access(_)) {
+        return false;
+    }
     event
         .paths
         .iter()
@@ -246,6 +354,22 @@ mod tests {
     }
 
     #[test]
+    fn pure_access_events_are_never_relevant() {
+        // Regression test: watch registration itself (and unrelated readers,
+        // like a search indexer) can generate Access(Open/Close) events even
+        // on paths that otherwise look relevant (e.g. `.git/refs`). Without
+        // filtering by EventKind, a watcher could refresh on nothing but
+        // someone reading a directory.
+        let git_dir = Path::new("/repo/.git");
+        let access_on_head = Event::new(EventKind::Access(notify::event::AccessKind::Open(
+            notify::event::AccessMode::Any,
+        )))
+        .add_path(PathBuf::from("/repo/.git/HEAD"));
+
+        assert!(!is_relevant(&access_on_head, git_dir));
+    }
+
+    #[test]
     fn a_repo_nested_inside_another_is_matched_by_its_own_git_dir() {
         // `strip_prefix` is what separates "inside .git" from "in the worktree";
         // a path merely *containing* `.git` as text must not be misread.
@@ -289,6 +413,38 @@ mod tests {
         assert!(
             count <= 3,
             "a single commit should debounce into roughly one refresh, got {count}"
+        );
+    }
+
+    #[test]
+    fn excluded_build_directories_are_never_watched() {
+        // Regression test: a blanket recursive watch on the whole repo used to
+        // include build/dependency directories. On a repo with an active build
+        // continuously writing into `target/`, that flooded inotify and pegged
+        // a CPU core badly enough to make the whole app appear to hang.
+        let repo = FixtureRepo::new();
+        repo.commit("seed.txt", "x", "Initial commit");
+        std::fs::create_dir_all(repo.path().join("target/debug")).unwrap();
+
+        let hits = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&hits);
+        let _watcher = RepoWatcher::start(repo.path(), move || {
+            counter.fetch_add(1, Ordering::SeqCst);
+        })
+        .expect("watcher should start");
+
+        std::thread::sleep(Duration::from_millis(150));
+
+        for i in 0..20 {
+            std::fs::write(repo.path().join(format!("target/debug/churn-{i}.tmp")), "x").unwrap();
+        }
+
+        std::thread::sleep(DEBOUNCE + Duration::from_millis(600));
+
+        assert_eq!(
+            hits.load(Ordering::SeqCst),
+            0,
+            "writes inside an excluded build directory must never trigger a refresh"
         );
     }
 }
