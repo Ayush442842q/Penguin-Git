@@ -25,3 +25,8 @@ pub fn apply_patch(repo_path: String, patch_content: String) -> Result<String, S
 pub fn read_patch_file(path: String) -> Result<String, String> {
     std::fs::read_to_string(&path).map_err(|e| format!("Failed to read patch file: {e}"))
 }
+
+#[tauri::command]
+pub fn write_patch_file(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content).map_err(|e| format!("Failed to write patch file: {e}"))
+}

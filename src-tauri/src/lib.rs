@@ -123,6 +123,7 @@ pub fn run() {
             commands::patch::preview_patch,
             commands::patch::apply_patch,
             commands::patch::read_patch_file,
+            commands::patch::write_patch_file,
             // workspace
             commands::workspace::create_workspace,
             commands::workspace::rename_workspace,

@@ -102,6 +102,7 @@ export const BRIDGE_FUNCTIONS = [
   "previewPatch",
   "applyPatch",
   "readPatchFile",
+  "writePatchFile",
   "savePatchFile",
   "pickPatchFile",
   "createWorkspace",
