@@ -32,9 +32,16 @@ pub async fn register(
     Json(payload): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<UserPublic>), ApiError> {
     let username = payload.username.trim();
-    if username.is_empty() || payload.password.trim().is_empty() {
+    let password = payload.password.trim();
+    if username.is_empty() || password.is_empty() {
         return Err(ApiError::BadRequest(
             "Username and password required".into(),
+        ));
+    }
+
+    if payload.password.len() < 8 {
+        return Err(ApiError::BadRequest(
+            "Password must be at least 8 characters long".into(),
         ));
     }
 
@@ -115,4 +122,41 @@ pub async fn logout(
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::AppState;
+    use sqlx::PgPool;
+
+    #[tokio::test]
+    async fn test_register_enforces_password_length() {
+        let pool = PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let state = Arc::new(AppState { db: pool });
+
+        // Test with empty password
+        let req = RegisterRequest {
+            username: "testuser".to_string(),
+            password: " ".repeat(3),
+        };
+        let res = register(State(state.clone()), Json(req)).await;
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "Bad Request: Username and password required"
+        );
+
+        // Test with short password
+        let req = RegisterRequest {
+            username: "testuser".to_string(),
+            password: "s".repeat(5),
+        };
+        let res = register(State(state.clone()), Json(req)).await;
+        assert!(res.is_err());
+        assert_eq!(
+            res.unwrap_err().to_string(),
+            "Bad Request: Password must be at least 8 characters long"
+        );
+    }
 }
