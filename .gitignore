@@ -32,6 +32,7 @@ scratch/
 
 # AI tooling
 .claude/
+.genesis/
 
 #intros
 videos/
