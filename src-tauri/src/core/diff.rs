@@ -41,6 +41,24 @@ pub fn diff_commit(repo_path: &Path, hash: &str) -> Result<String, GitError> {
     )
 }
 
+/// Unified diff for a single file within a commit — the same as [`diff_commit`]
+/// scoped with a pathspec, for a commit-detail view where a file list lets you
+/// drill into one file's change instead of the whole commit at once.
+pub fn diff_commit_file(repo_path: &Path, hash: &str, path: &str) -> Result<String, GitError> {
+    run_git(
+        repo_path,
+        &[
+            "show",
+            "--no-color",
+            "--first-parent",
+            "--format=",
+            hash,
+            "--",
+            path,
+        ],
+    )
+}
+
 /// Diff of an untracked file against nothing, so new files preview like any other.
 ///
 /// `--no-index` compares paths outside the index and exits 1 to mean "these
@@ -210,6 +228,26 @@ mod tests {
         assert!(
             !diff.contains("+first"),
             "only this commit's changes belong here"
+        );
+    }
+
+    #[test]
+    fn diff_commit_file_scopes_to_a_single_path() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "first\n", "First");
+        repo.write("a.txt", "first\nmore a\n");
+        repo.git(&["add", "a.txt"]);
+        repo.write("b.txt", "second\n");
+        repo.git(&["add", "b.txt"]);
+        let second = repo.commit_all("Touch both files");
+
+        let diff = diff_commit_file(repo.path(), &second, "b.txt").expect("show should succeed");
+
+        assert!(diff.contains("b.txt"));
+        assert!(diff.contains("+second"));
+        assert!(
+            !diff.contains("a.txt"),
+            "scoping to b.txt must exclude a.txt's hunk"
         );
     }
 

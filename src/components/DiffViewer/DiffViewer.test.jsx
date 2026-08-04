@@ -83,6 +83,72 @@ describe("DiffViewer", () => {
     });
   });
 
+  describe("commit detail", () => {
+    const DETAILS = {
+      hash: "abcdef1234567890",
+      authorName: "Ada Lovelace",
+      authorEmail: "ada@example.invalid",
+      timestamp: Math.floor(Date.now() / 1000) - 3600,
+      parents: [],
+      refs: ["HEAD -> main", "tag: v1.0"],
+      body: "Subject line\n\nBody paragraph.",
+      files: [
+        { path: "src/a.rs", insertions: 3, deletions: 1 },
+        { path: "assets/logo.png", insertions: null, deletions: null },
+      ],
+    };
+
+    it("renders the commit message, byline, refs, and file stats", async () => {
+      bridge.getCommitDiff.mockResolvedValue(SAMPLE_DIFF);
+      bridge.getCommitDetails.mockResolvedValue(DETAILS);
+      setStore({ selectedCommit: "abcdef1234" });
+
+      render(<DiffViewer />);
+
+      await waitFor(() => expect(screen.getByText(/Subject line/)).toBeInTheDocument());
+      expect(screen.getByText(/Body paragraph\./)).toBeInTheDocument();
+      expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+      expect(screen.getByText("HEAD -> main")).toBeInTheDocument();
+      expect(screen.getByText("tag: v1.0")).toBeInTheDocument();
+      expect(screen.getByText("src/a.rs")).toBeInTheDocument();
+      expect(screen.getByText("+3 -1")).toBeInTheDocument();
+      expect(screen.getByText("assets/logo.png")).toBeInTheDocument();
+      expect(screen.getByText("binary")).toBeInTheDocument();
+    });
+
+    it("scopes the diff to a clicked file, then back to the full commit diff on a second click", async () => {
+      bridge.getCommitDiff.mockResolvedValue(SAMPLE_DIFF);
+      bridge.getCommitDetails.mockResolvedValue(DETAILS);
+      bridge.getCommitFileDiff.mockResolvedValue("diff --git a/src/a.rs b/src/a.rs\n+scoped");
+      setStore({ selectedCommit: "abcdef1234" });
+
+      render(<DiffViewer />);
+      await waitFor(() => expect(screen.getByText("src/a.rs")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByText("src/a.rs"));
+      await waitFor(() =>
+        expect(bridge.getCommitFileDiff).toHaveBeenCalledWith("/repo", "abcdef1234", "src/a.rs")
+      );
+      await waitFor(() => expect(screen.getByText("+scoped")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByText("src/a.rs"));
+      await waitFor(() => expect(screen.getByText("+new line")).toBeInTheDocument());
+    });
+
+    it("copies the full hash to the clipboard", async () => {
+      Object.assign(navigator, { clipboard: { writeText: vi.fn(() => Promise.resolve()) } });
+      bridge.getCommitDiff.mockResolvedValue(SAMPLE_DIFF);
+      bridge.getCommitDetails.mockResolvedValue(DETAILS);
+      setStore({ selectedCommit: "abcdef1234" });
+
+      render(<DiffViewer />);
+      await waitFor(() => expect(screen.getByText(/Subject line/)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByTitle("Copy full hash"));
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(DETAILS.hash);
+    });
+  });
+
   describe("file diffs", () => {
     it("requests the staged diff for a staged selection", async () => {
       bridge.getFileDiff.mockResolvedValue(SAMPLE_DIFF);

@@ -114,6 +114,157 @@ function formatDate(seconds) {
   });
 }
 
+const RELATIVE_UNITS = [
+  ["year", 31536000],
+  ["month", 2592000],
+  ["day", 86400],
+  ["hour", 3600],
+  ["minute", 60],
+];
+
+/** "3 hours ago", falling back to "just now" under a minute. */
+function formatRelativeTime(seconds) {
+  if (!seconds) return "";
+  const diff = Math.floor(Date.now() / 1000) - seconds;
+  if (diff < 60) return "just now";
+
+  for (const [unit, unitSeconds] of RELATIVE_UNITS) {
+    const value = Math.floor(diff / unitSeconds);
+    if (value >= 1) return `${value} ${unit}${value === 1 ? "" : "s"} ago`;
+  }
+  return "just now";
+}
+
+const AVATAR_COLORS = ["#7c5cff", "#2fa4e7", "#20b8a3", "#e0a63a", "#e0573a", "#d24fa0", "#5b8def"];
+
+/**
+ * Deterministic initials-on-a-circle avatar, derived locally from the
+ * author's identity.
+ *
+ * Not a Gravatar lookup: this app makes no network requests of its own
+ * (see ARCHITECTURE.md), and a per-commit avatar keyed off the author's
+ * email would be exactly that.
+ */
+function Avatar({ name, email }) {
+  const seed = email || name || "?";
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  const color = AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+
+  const initials = (name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+
+  return (
+    <div className="commit-avatar" style={{ backgroundColor: color }} title={name}>
+      {initials || "?"}
+    </div>
+  );
+}
+
+/**
+ * Commit metadata, message body, and per-file change stats — shown above the
+ * diff when a commit (rather than a file) is selected. Clicking a file scopes
+ * the diff below to just that file; clicking it again returns to the full
+ * commit diff.
+ */
+function CommitDetail({ details, hash, selectedPath, onSelectFile }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!details) return null;
+
+  const handleCopyHash = () => {
+    navigator.clipboard.writeText(details.hash || hash).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    });
+  };
+
+  return (
+    <div className="commit-detail">
+      <div className="commit-detail-header">
+        <Avatar name={details.authorName} email={details.authorEmail} />
+        <div className="commit-detail-meta">
+          <pre className="commit-detail-body">{details.body}</pre>
+          <div className="commit-detail-byline text-muted">
+            <span>{details.authorName}</span>
+            <span title={formatDate(details.timestamp)}>
+              committed {formatRelativeTime(details.timestamp)}
+            </span>
+          </div>
+          {details.refs?.length > 0 && (
+            <div className="commit-detail-refs">
+              {details.refs.map((ref) => (
+                <span key={ref} className="badge badge-purple">
+                  {ref}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          className="ghost commit-hash-copy mono"
+          onClick={handleCopyHash}
+          title="Copy full hash"
+        >
+          {copied ? "Copied!" : (details.hash || hash).slice(0, 7)}
+        </button>
+      </div>
+
+      {details.files?.length > 0 && (
+        <ul className="commit-detail-files">
+          {details.files.map((file) => {
+            const total = (file.insertions ?? 0) + (file.deletions ?? 0);
+            const addRatio = total > 0 ? (file.insertions ?? 0) / total : 0;
+            return (
+              <li
+                key={file.path}
+                className={`commit-detail-file${selectedPath === file.path ? " selected" : ""}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectFile(file.path)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectFile(file.path);
+                  }
+                }}
+              >
+                <span className="file-path truncate" title={file.path}>
+                  {file.path}
+                </span>
+                {file.insertions == null ? (
+                  <span className="text-dim">binary</span>
+                ) : (
+                  <>
+                    <span className="commit-detail-stat-counts text-dim">
+                      +{file.insertions} -{file.deletions}
+                    </span>
+                    <span className="commit-detail-stat-bar">
+                      <span
+                        className="commit-detail-stat-add"
+                        style={{ width: `${addRatio * 100}%` }}
+                      />
+                      <span
+                        className="commit-detail-stat-del"
+                        style={{ width: `${(1 - addRatio) * 100}%` }}
+                      />
+                    </span>
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /**
  * Per-line authorship.
  *
@@ -206,7 +357,19 @@ export default function DiffViewer() {
    * previous selection — which is what removes the need to synchronously clear
    * state inside the effect (a cascading-render pattern React warns about).
    */
-  const [content, setContent] = useState({ key: null, diff: "", history: [], blame: [] });
+  const [content, setContent] = useState({
+    key: null,
+    diff: "",
+    history: [],
+    blame: [],
+    details: null,
+  });
+
+  // Which file (if any) within the selected commit's file list is drilled
+  // into. Reset below whenever the selected commit itself changes, so
+  // switching commits doesn't leave a stale file scoping the new one's diff.
+  const [commitFilePath, setCommitFilePath] = useState(null);
+  const [resetForHash, setResetForHash] = useState(null);
 
   // File and commit selection are mutually exclusive views; whichever changed
   // last is what the panel shows.
@@ -215,19 +378,34 @@ export default function DiffViewer() {
     : selectedCommit && selectedCommit !== WIP_ROW_HASH
       ? { kind: "commit", hash: selectedCommit }
       : null;
-  const targetKey = target ? `${tab}:${JSON.stringify(target)}` : null;
+  const selectedCommitHash = target?.kind === "commit" ? target.hash : null;
+
+  // Adjusting state during render rather than in an effect — the officially
+  // recommended way to reset state when a prop-like value changes, since it
+  // avoids the extra render an effect-based reset would cause.
+  if (selectedCommitHash !== resetForHash) {
+    setResetForHash(selectedCommitHash);
+    setCommitFilePath(null);
+  }
+
+  const targetKey = target ? `${tab}:${commitFilePath ?? ""}:${JSON.stringify(target)}` : null;
 
   useEffect(() => {
     if (!repo || !targetKey) return;
 
     let cancelled = false;
-    const selection = JSON.parse(targetKey.slice(targetKey.indexOf(":") + 1));
+    const selection = target;
 
     const load = async () => {
       try {
         if (selection.kind === "commit") {
-          const diff = await git.getCommitDiff(repo.path, selection.hash);
-          if (!cancelled) setContent({ key: targetKey, diff, history: [], blame: [] });
+          const [diff, details] = await Promise.all([
+            commitFilePath
+              ? git.getCommitFileDiff(repo.path, selection.hash, commitFilePath)
+              : git.getCommitDiff(repo.path, selection.hash),
+            git.getCommitDetails(repo.path, selection.hash),
+          ]);
+          if (!cancelled) setContent({ key: targetKey, diff, history: [], blame: [], details });
           return;
         }
 
@@ -235,17 +413,27 @@ export default function DiffViewer() {
           const diff = selection.untracked
             ? await git.getUntrackedDiff(repo.path, selection.path)
             : await git.getFileDiff(repo.path, selection.path, selection.staged);
-          if (!cancelled) setContent({ key: targetKey, diff, history: [], blame: [] });
+          if (!cancelled)
+            setContent({ key: targetKey, diff, history: [], blame: [], details: null });
         } else if (tab === "history") {
           const history = await git.getFileHistory(repo.path, selection.path);
-          if (!cancelled) setContent({ key: targetKey, diff: "", history, blame: [] });
+          if (!cancelled)
+            setContent({ key: targetKey, diff: "", history, blame: [], details: null });
         } else if (tab === "blame") {
           const blame = await git.getBlame(repo.path, selection.path);
-          if (!cancelled) setContent({ key: targetKey, diff: "", history: [], blame });
+          if (!cancelled)
+            setContent({ key: targetKey, diff: "", history: [], blame, details: null });
         }
       } catch (err) {
         if (!cancelled) {
-          setContent({ key: targetKey, diff: "", history: [], blame: [], error: String(err) });
+          setContent({
+            key: targetKey,
+            diff: "",
+            history: [],
+            blame: [],
+            details: null,
+            error: String(err),
+          });
         }
       }
     };
@@ -254,7 +442,8 @@ export default function DiffViewer() {
     return () => {
       cancelled = true;
     };
-  }, [repo, targetKey, tab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `target` is derived fresh each render; targetKey already captures its identity
+  }, [repo, targetKey, tab, commitFilePath]);
 
   // Only content loaded for the current selection is shown; anything else is
   // still in flight.
@@ -303,12 +492,24 @@ export default function DiffViewer() {
         ) : !fresh ? (
           <p className="diff-empty text-muted">Loading…</p>
         ) : !isFile || tab === "diff" ? (
-          <UnifiedDiff
-            text={fresh.diff}
-            filePath={isFile ? target.path : null}
-            canStageHunks={isFile && !target.staged}
-            onStageHunk={(patch) => useRepoStore.getState().stageHunk(patch)}
-          />
+          <>
+            {!isFile && (
+              <CommitDetail
+                details={fresh.details}
+                hash={target.hash}
+                selectedPath={commitFilePath}
+                onSelectFile={(path) =>
+                  setCommitFilePath((current) => (current === path ? null : path))
+                }
+              />
+            )}
+            <UnifiedDiff
+              text={fresh.diff}
+              filePath={isFile ? target.path : null}
+              canStageHunks={isFile && !target.staged}
+              onStageHunk={(patch) => useRepoStore.getState().stageHunk(patch)}
+            />
+          </>
         ) : tab === "history" ? (
           <HistoryView commits={fresh.history} onSelect={selectCommit} />
         ) : (

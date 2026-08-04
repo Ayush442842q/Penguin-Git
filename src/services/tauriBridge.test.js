@@ -61,6 +61,18 @@ describe("tauriBridge", () => {
         { repoPath: "/r", hash: "abc" },
       ],
       [
+        "getCommitDetails",
+        () => git.getCommitDetails("/r", "abc"),
+        "get_commit_details",
+        { repoPath: "/r", hash: "abc" },
+      ],
+      [
+        "getCommitFileDiff",
+        () => git.getCommitFileDiff("/r", "abc", "a.txt"),
+        "get_commit_file_diff",
+        { repoPath: "/r", hash: "abc", path: "a.txt" },
+      ],
+      [
         "getBlame",
         () => git.getBlame("/r", "a.txt"),
         "get_blame",

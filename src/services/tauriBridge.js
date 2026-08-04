@@ -66,6 +66,12 @@ export const getUntrackedDiff = (repoPath, path) =>
 
 export const getCommitDiff = (repoPath, hash) => invoke("get_commit_diff", { repoPath, hash });
 
+export const getCommitDetails = (repoPath, hash) =>
+  invoke("get_commit_details", { repoPath, hash });
+
+export const getCommitFileDiff = (repoPath, hash, path) =>
+  invoke("get_commit_file_diff", { repoPath, hash, path });
+
 export const getFileHistory = (repoPath, path, limit = 100) =>
   invoke("get_file_history", { repoPath, path, limit });
 

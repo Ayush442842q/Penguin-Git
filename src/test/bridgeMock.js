@@ -23,6 +23,8 @@ export const BRIDGE_FUNCTIONS = [
   "getFileDiff",
   "getUntrackedDiff",
   "getCommitDiff",
+  "getCommitDetails",
+  "getCommitFileDiff",
   "getFileHistory",
   "getBlame",
   "stageFile",

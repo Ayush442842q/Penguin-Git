@@ -1,11 +1,16 @@
 use std::path::Path;
 
 use super::to_ipc_error;
-use crate::core::log::{compute_lanes, get_log, Commit, GraphLayout};
+use crate::core::log::{self, compute_lanes, get_log, Commit, CommitDetails, GraphLayout};
 
 #[tauri::command]
 pub fn get_git_log(repo_path: String, limit: usize) -> Result<Vec<Commit>, String> {
     get_log(Path::new(&repo_path), limit).map_err(to_ipc_error)
+}
+
+#[tauri::command]
+pub fn get_commit_details(repo_path: String, hash: String) -> Result<CommitDetails, String> {
+    log::get_commit_details(Path::new(&repo_path), &hash).map_err(to_ipc_error)
 }
 
 /// Commits plus their lane assignments, so the graph renders from one round trip.
