@@ -122,6 +122,7 @@ pub fn run() {
             commands::patch::export_patch,
             commands::patch::preview_patch,
             commands::patch::apply_patch,
+            commands::patch::write_patch_file,
             // workspace
             commands::workspace::create_workspace,
             commands::workspace::rename_workspace,

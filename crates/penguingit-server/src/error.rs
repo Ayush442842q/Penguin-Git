@@ -36,7 +36,13 @@ impl IntoResponse for ApiError {
             ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             ApiError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             ApiError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
-            ApiError::Sqlx(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
+            ApiError::Sqlx(err) => {
+                tracing::error!("Database error: {:?}", err);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                )
+            }
         };
 
         let body = Json(json!({
@@ -44,5 +50,24 @@ impl IntoResponse for ApiError {
         }));
 
         (status, body).into_response()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_sqlx_error_logs_and_returns_generic_message() {
+        let err = ApiError::Sqlx(sqlx::Error::RowNotFound);
+        let res = err.into_response();
+        assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+        // Extract body bytes to verify the generic message
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let json: serde_json::Value = serde_json::from_slice(&body_bytes).expect("parse json");
+        assert_eq!(json["error"], "Internal server error");
     }
 }

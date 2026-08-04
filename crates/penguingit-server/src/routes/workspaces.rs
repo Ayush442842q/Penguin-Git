@@ -30,22 +30,31 @@ pub struct AddRepoRequest {
 }
 
 /// Helper function to check if a user is an owner or member of a workspace.
+#[derive(Debug, Clone)]
+pub struct WorkspaceMemberInfo {
+    pub is_member: bool,
+    pub role: Option<String>,
+}
+
 pub async fn check_workspace_membership(
     db: &sqlx::PgPool,
     workspace_id: Uuid,
     user_id: Uuid,
-) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar::<_, bool>(
+) -> Result<WorkspaceMemberInfo, sqlx::Error> {
+    let (is_member, role) = sqlx::query_as::<_, (bool, Option<String>)>(
         "SELECT EXISTS(
             SELECT 1 FROM workspaces WHERE id = $1 AND owner_id = $2
             UNION
             SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2
-        )",
+        ),
+         (SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2)",
     )
     .bind(workspace_id)
     .bind(user_id)
     .fetch_one(db)
-    .await
+    .await?;
+
+    Ok(WorkspaceMemberInfo { is_member, role })
 }
 
 pub async fn create_workspace(
@@ -107,8 +116,8 @@ pub async fn get_workspace(
     auth_user: AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Workspace>, ApiError> {
-    let is_member = check_workspace_membership(&state.db, id, auth_user.id).await?;
-    if !is_member {
+    let membership_info = check_workspace_membership(&state.db, id, auth_user.id).await?;
+    if !membership_info.is_member {
         return Err(ApiError::Forbidden(
             "You are not a member of this workspace".into(),
         ));
@@ -131,10 +140,15 @@ pub async fn add_member(
     Path(id): Path<Uuid>,
     Json(payload): Json<AddMemberRequest>,
 ) -> Result<(StatusCode, Json<UserPublic>), ApiError> {
-    let is_member = check_workspace_membership(&state.db, id, auth_user.id).await?;
-    if !is_member {
+    let membership_info = check_workspace_membership(&state.db, id, auth_user.id).await?;
+    if !membership_info.is_member {
         return Err(ApiError::Forbidden(
             "Only members can add users to this workspace".into(),
+        ));
+    }
+    if membership_info.role != Some("owner".to_string()) {
+        return Err(ApiError::Forbidden(
+            "Only owners can add users to this workspace".into(),
         ));
     }
 
@@ -171,11 +185,23 @@ pub async fn remove_member(
     auth_user: AuthUser,
     Path((id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, ApiError> {
-    let is_member = check_workspace_membership(&state.db, id, auth_user.id).await?;
-    if !is_member {
+    let membership_info = check_workspace_membership(&state.db, id, auth_user.id).await?;
+    if !membership_info.is_member {
         return Err(ApiError::Forbidden(
             "Only members can modify workspace membership".into(),
         ));
+    }
+    if auth_user.id == user_id {
+        return Err(ApiError::BadRequest(
+            "Cannot remove yourself from workspace".into(),
+        ));
+    }
+    if let Some(role) = membership_info.role {
+        if role == "owner" && user_id == auth_user.id {
+            return Err(ApiError::BadRequest(
+                "Owners cannot remove themselves from workspace".into(),
+            ));
+        }
     }
 
     sqlx::query("DELETE FROM workspace_members WHERE workspace_id = $1 AND user_id = $2")
@@ -193,10 +219,15 @@ pub async fn add_repo(
     Path(id): Path<Uuid>,
     Json(payload): Json<AddRepoRequest>,
 ) -> Result<(StatusCode, Json<WorkspaceRepo>), ApiError> {
-    let is_member = check_workspace_membership(&state.db, id, auth_user.id).await?;
-    if !is_member {
+    let membership_info = check_workspace_membership(&state.db, id, auth_user.id).await?;
+    if !membership_info.is_member {
         return Err(ApiError::Forbidden(
             "Only members can add repos to this workspace".into(),
+        ));
+    }
+    if membership_info.role != Some("owner".to_string()) {
+        return Err(ApiError::Forbidden(
+            "Only owners can add repos to this workspace".into(),
         ));
     }
 
@@ -224,10 +255,15 @@ pub async fn remove_repo(
     auth_user: AuthUser,
     Path((id, repo_name)): Path<(Uuid, String)>,
 ) -> Result<StatusCode, ApiError> {
-    let is_member = check_workspace_membership(&state.db, id, auth_user.id).await?;
-    if !is_member {
+    let membership_info = check_workspace_membership(&state.db, id, auth_user.id).await?;
+    if !membership_info.is_member {
         return Err(ApiError::Forbidden(
             "Only members can remove repos from this workspace".into(),
+        ));
+    }
+    if membership_info.role != Some("owner".to_string()) {
+        return Err(ApiError::Forbidden(
+            "Only owners can remove repos from this workspace".into(),
         ));
     }
 
@@ -251,5 +287,30 @@ mod tests {
             ApiError::Forbidden("You are not a member of this workspace".into()).to_string(),
             "Forbidden: You are not a member of this workspace"
         );
+    }
+
+    #[test]
+    fn test_member_role_check_contract() {
+        // Test that role-based restrictions are enforced
+        let member_info = WorkspaceMemberInfo {
+            is_member: true,
+            role: Some("owner".to_string()),
+        };
+        assert!(member_info.is_member);
+        assert_eq!(member_info.role, Some("owner".to_string()));
+
+        let member_info = WorkspaceMemberInfo {
+            is_member: true,
+            role: Some("member".to_string()),
+        };
+        assert!(member_info.is_member);
+        assert_eq!(member_info.role, Some("member".to_string()));
+
+        let member_info = WorkspaceMemberInfo {
+            is_member: false,
+            role: None,
+        };
+        assert!(!member_info.is_member);
+        assert!(member_info.role.is_none());
     }
 }

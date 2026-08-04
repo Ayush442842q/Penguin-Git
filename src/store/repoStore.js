@@ -435,8 +435,8 @@ export const useRepoStore = create((set, get) => ({
 export async function subscribeToRepoChanges() {
   const unlistenWatcher = await git.onRepoChanged((event) => {
     const payload = event?.payload;
-    if (payload?.repo_id) {
-      useRepoStore.getState().refresh(payload.repo_id);
+    if (payload?.repoId) {
+      useRepoStore.getState().refresh(payload.repoId);
     } else {
       useRepoStore.getState().refresh();
     }
