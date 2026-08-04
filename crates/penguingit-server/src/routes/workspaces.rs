@@ -54,10 +54,7 @@ pub async fn check_workspace_membership(
     .fetch_one(db)
     .await?;
 
-    Ok(WorkspaceMemberInfo {
-        is_member,
-        role,
-    })
+    Ok(WorkspaceMemberInfo { is_member, role })
 }
 
 pub async fn create_workspace(
@@ -124,7 +121,7 @@ pub async fn get_workspace(
         return Err(ApiError::Forbidden(
             "You are not a member of this workspace".into(),
         ));
-}
+    }
 
     let ws = sqlx::query_as::<_, Workspace>(
         "SELECT id, name, owner_id, created_at FROM workspaces WHERE id = $1",
