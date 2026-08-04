@@ -32,26 +32,37 @@ pub fn slugify_issue_title(number: u64, title: &str) -> String {
     }
 }
 
+// The `keyring` crate's Linux backend makes blocking D-Bus calls to the
+// Secret Service. Run every keyring access in `spawn_blocking` — calling it
+// directly on a plain (non-async) `#[tauri::command]` deadlocks the GTK main
+// loop if the D-Bus call needs that same loop to make progress.
+
 #[tauri::command]
-pub fn save_github_token(token: String) -> Result<(), String> {
-    core_save_github_token(&token)
+pub async fn save_github_token(token: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || core_save_github_token(&token))
+        .await
+        .map_err(|e| format!("Keyring task failed: {e}"))?
 }
 
 #[tauri::command]
-pub fn get_github_token() -> Result<bool, String> {
-    Ok(has_github_token())
+pub async fn get_github_token() -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(has_github_token)
+        .await
+        .map_err(|e| format!("Keyring task failed: {e}"))
 }
 
 #[tauri::command]
-pub fn delete_github_token() -> Result<(), String> {
-    core_delete_github_token()
+pub async fn delete_github_token() -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(core_delete_github_token)
+        .await
+        .map_err(|e| format!("Keyring task failed: {e}"))?
 }
 
 #[tauri::command]
 pub async fn test_github_token(token: Option<String>) -> Result<String, String> {
     let pat = match token {
         Some(t) if !t.trim().is_empty() => t.trim().to_string(),
-        _ => core_get_github_token()?,
+        _ => get_token().await?,
     };
 
     let client = GithubClient::new(pat)?;
@@ -64,10 +75,16 @@ pub fn get_repo_origin(repo_path: String) -> Result<RepoOrigin, String> {
     core_get_repo_origin(&path).map_err(|e| e.to_string())
 }
 
+async fn get_token() -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(core_get_github_token)
+        .await
+        .map_err(|e| format!("Keyring task failed: {e}"))?
+}
+
 #[tauri::command]
 pub async fn github_search_prs(repo_path: String) -> Result<Vec<LaunchpadItem>, String> {
     let origin = get_repo_origin(repo_path)?;
-    let pat = core_get_github_token()?;
+    let pat = get_token().await?;
     let client = GithubClient::new(pat)?;
     client.search_prs(&origin.owner, &origin.repo).await
 }
@@ -75,7 +92,7 @@ pub async fn github_search_prs(repo_path: String) -> Result<Vec<LaunchpadItem>, 
 #[tauri::command]
 pub async fn github_get_launchpad_items(repo_path: String) -> Result<Vec<LaunchpadItem>, String> {
     let origin = get_repo_origin(repo_path)?;
-    let pat = core_get_github_token()?;
+    let pat = get_token().await?;
     let client = GithubClient::new(pat)?;
     client
         .get_launchpad_items(&origin.owner, &origin.repo)
@@ -85,7 +102,7 @@ pub async fn github_get_launchpad_items(repo_path: String) -> Result<Vec<Launchp
 #[tauri::command]
 pub async fn github_get_pr(repo_path: String, number: u64) -> Result<LaunchpadItem, String> {
     let origin = get_repo_origin(repo_path)?;
-    let pat = core_get_github_token()?;
+    let pat = get_token().await?;
     let client = GithubClient::new(pat)?;
     client.get_pr(&origin.owner, &origin.repo, number).await
 }
@@ -99,7 +116,7 @@ pub async fn github_create_pr(
     base: String,
 ) -> Result<LaunchpadItem, String> {
     let origin = get_repo_origin(repo_path)?;
-    let pat = core_get_github_token()?;
+    let pat = get_token().await?;
     let client = GithubClient::new(pat)?;
     client
         .create_pr(&origin.owner, &origin.repo, &title, &body, &head, &base)
