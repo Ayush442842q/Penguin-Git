@@ -86,8 +86,13 @@ fn emit_mcp_event(app: &AppHandle, tool: &str, repo_path: &str) {
     let repo_id = if let Some(state) = app.try_state::<AppState>() {
         if let Ok(canon_path) = std::fs::canonicalize(repo_path) {
             let repos = state.list();
-            repos.iter()
-                .find(|r| std::fs::canonicalize(&r.path).map(|p| p == canon_path).unwrap_or(false))
+            repos
+                .iter()
+                .find(|r| {
+                    std::fs::canonicalize(&r.path)
+                        .map(|p| p == canon_path)
+                        .unwrap_or(false)
+                })
                 .map(|r| r.id.0.clone())
                 .unwrap_or_else(|| repo_path.to_string())
         } else {
