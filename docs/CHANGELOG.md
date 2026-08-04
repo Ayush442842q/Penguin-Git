@@ -1,10 +1,41 @@
 # Changelog
 
-All notable changes to this project are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions track the build phases in [ROADMAP.md](ROADMAP.md) rather than semver, since the project is pre-1.0 and in early development.
+All notable changes to this project are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). As of v1.0.0 this project follows [semver](https://semver.org/); versions before v1.0.0 tracked the build phases in [ROADMAP.md](ROADMAP.md) instead, since the API and UX were still settling.
 
-## [Unreleased] — Phase 2: Merge conflicts, interactive rebase, undo/redo
+## [Unreleased] — Phase 2: Merge conflicts, interactive rebase
 
-Not started. See [ROADMAP.md](ROADMAP.md#phases) for scope.
+Undo/redo landed as part of v1.0.0 (see below); a visual merge-conflict resolver and interactive rebase are still outstanding. See [ROADMAP.md](ROADMAP.md#phases) for scope.
+
+## v1.0.0 — First stable release (2026-08-05)
+
+The Phase 0 + Phase 1 feature set from v0.1.0, hardened: an undo/redo action journal, local patch import/export, workspace role enforcement, and a round of security and dependency fixes.
+
+### Added
+
+- Undo/redo action journal, scoped per repository, recording branch delete/checkout/merge and commit only after the underlying git operation actually succeeds (no phantom entries on a failed op)
+- Local patch import/export via custom Rust file read/write commands (`read_patch_file` / `write_patch_file`), replacing the previous browser-only file APIs
+- Workspace owner/member role enforcement on the self-hosted backend's workspace routes
+- `repoId`-based `repo-changed` event payloads (previously path-based), and camelCase serde renaming across server models for frontend consistency
+- Tauri app capabilities configuration (`src-tauri/capabilities/default.json`)
+
+### Fixed
+
+- Minimum password length (8 characters) enforced on registration
+- `react-router` upgraded to resolve a CSRF vulnerability (GHSA-qwww-vcr4-c8h2)
+- Unused `mysql` driver and a vulnerable `rsa` transitive dependency removed
+- Filesystem-watcher CPU storm and a keyring-blocking deadlock risk
+- Hunk staging now works on untracked and renamed files via dynamic diff-header parsing
+- SQLx errors are logged server-side with a generic message returned to clients, instead of leaking raw database errors
+- AI provider responses now checked for HTTP status before deserializing, and error bodies are read into typed structs instead of ad hoc JSON parsing
+- Embedded MCP server handoff no longer loses data on the read/write boundary
+- Two CodeQL "hard-coded cryptographic value" false positives (test fixtures, not real credentials) resolved by generating random test values instead of literals
+- `cargo run` / `tauri dev` ambiguity after adding the `penguingit-sequence-editor` binary — `default-run` now pins the main binary
+
+### Changed
+
+- Rust toolchain bumped 1.88 → 1.94 (required by the `sqlx` 0.9 upgrade)
+- Major dependency upgrades: `axum` 0.7 → 0.8, `sqlx` 0.8 → 0.9, `rand` 0.8 → 0.10, `tower-http` 0.6 → 0.7, `keyring` 3.6 → 4.1, plus routine GitHub Actions and frontend dependency bumps
+- Branch protection: the repo owner's own PRs auto-merge once CI is green; PRs from anyone else still require review
 
 ## v0.1.0 — First release (2026-08-03)
 
