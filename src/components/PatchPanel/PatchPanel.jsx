@@ -6,6 +6,7 @@ import {
   applyPatch,
   savePatchFile,
   pickPatchFile,
+  writePatchFile,
 } from "../../services/tauriBridge";
 import "./PatchPanel.css";
 
@@ -34,21 +35,10 @@ export default function PatchPanel({ isOpen, onClose }) {
       }
       const savePath = await savePatchFile(exported.suggestedName);
       if (savePath) {
-        // Write content to chosen path via Tauri fs or Web API / opener
-        // In Tauri v2, tauri-plugin-fs or std write can be used, but since savePatchFile returns path
-        // We can pass path or write file via tauri plugin or helper.
-        // Wait! Let's check if writeTextFile is available or if we can handle save in export command.
-        // Actually, if we use browser Blob download or tauri save file, let's write content!
-        const blob = new Blob([exported.content], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = exported.suggestedName;
-        a.click();
-        URL.revokeObjectURL(url);
+        await writePatchFile(savePath, exported.content);
         setStatusMessage({
           type: "success",
-          text: `✓ Patch exported as ${exported.suggestedName}`,
+          text: `✓ Patch exported successfully to ${savePath}`,
         });
       }
     } catch (err) {
