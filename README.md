@@ -20,14 +20,20 @@ PenguinGit brings GitKraken's visual power to the Linux desktop — including th
 
 It's also **agent-native**: a built-in MCP server exposes the same git operations the GUI uses, so AI coding assistants can drive your repository with every change reflected live in the UI.
 
-> **Early development.** Phases 0 and 1 are done — core git engine, commit graph, diff viewer, staging, branches, and stash. [v0.1.0](https://github.com/Ayush442842q/Penguin-Git/releases/tag/v0.1.0) is the first packaged release (`.deb` / `.rpm` / `.AppImage`); everything past that is still in progress. See the [roadmap](docs/ROADMAP.md).
+> **Pre-1.0.** [v0.1.0](https://github.com/Ayush442842q/Penguin-Git/releases/tag/v0.1.0) is the first packaged release (`.deb` / `.rpm` / `.AppImage`) and already covers all 8 roadmap phases — conflict resolution, interactive rebase, undo/redo, multi-repo, an MCP server, bring-your-own-key AI, GitHub Launchpad, and an optional self-hosted cloud backend. The one confirmed gap is `git worktree` support. See the [roadmap](docs/ROADMAP.md) for the phase-by-phase detail.
 
 ## Highlights
 
 - **Interactive commit graph** — lane-based DAG rendering, virtualized, with a WIP row for uncommitted changes and a right-click action menu
 - **Unified diff viewer** — plus file history and line-level blame
 - **Live updates** — driven by a filesystem watcher, not a polling loop
-- **Coming**: visual merge conflict resolution, interactive rebase, undo/redo, multi-repo, MCP server, bring-your-own-key AI, GitHub Launchpad, self-hosted cloud patches
+- **Merge conflicts, interactive rebase, and undo/redo** — conflict resolution that actually writes to disk, sequence-editor-backed rebase, an undo/redo journal on `Ctrl+Z`/`Cmd+Z`
+- **Multi-repo** — tabs, a recent-repos launcher, named workspaces, and submodule support
+- **Agent-native MCP server** — 18 tools covering the full git workflow, embedded or standalone, with live events back to the GUI
+- **AI features** — bring your own Anthropic/OpenAI key for commit composition, explanations, and PR descriptions
+- **GitHub Launchpad** — a cross-repo PR/issue inbox with "start work on issue"
+- **Optional self-hosted cloud backend** — Axum + Postgres, for shareable patches and workspaces ([setup guide](https://github.com/Ayush442842q/Penguin-Git/wiki/Cloud-Server-Setup))
+- **Coming**: `git worktree` support
 
 ## Install
 

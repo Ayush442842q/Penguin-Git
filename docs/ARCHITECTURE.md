@@ -27,11 +27,11 @@ This document explains how PenguinGit is put together and, more importantly, the
 - **Frontend** (`src/`) — React 19 + Vite. Talks to the backend exclusively through Tauri's `invoke()` bridge. Never shells out to anything itself.
 - **Backend** (`src-tauri/`) — Rust. Two layers, described below.
 - **System git** — every git operation is a subprocess call to the user's own `git` installation. PenguinGit never links `libgit2`/`git2` or reimplements git plumbing, so it automatically respects the user's SSH agent, GPG signing, credential helpers, and global config.
-- **MCP server** (Phase 4, not yet built) — a sibling consumer of the same Rust core, exposing git operations as MCP tools so AI agents can drive a repository directly, with changes reflected live in the GUI.
+- **MCP server** (`core::mcp_server`, `crates/penguingit-mcp`) — a sibling consumer of the same Rust core, exposing 18 git operations as MCP tools so AI agents can drive a repository directly (embedded over a Unix socket, or standalone over `stdio`), with changes reflected live in the GUI via an in-process event bus.
 
 ## The core/adapter split (the one rule that matters most)
 
-This is the single most important structural rule in the codebase, and the reason Phase 4 (the MCP server) will be able to reuse all of Phase 1's git logic with zero duplication:
+This is the single most important structural rule in the codebase, and the reason the MCP server (`core::mcp_server`) reuses all of the core git logic with zero duplication:
 
 - **`src-tauri/src/core/`** — plain Rust functions that do the actual work: spawning `git`, parsing its output, returning typed results. No `#[tauri::command]` attributes, no knowledge of Tauri's IPC layer. Fully unit-testable in isolation using the fixture-repo harness (`core::test_support::FixtureRepo`).
 - **`src-tauri/src/commands/`** — thin `#[tauri::command]` adapters. Each one is a few lines: call into `core::`, serialize the result, return it. No git-invocation logic lives here. Phase 0 ships this module deliberately empty; Phase 1 fills it in.
@@ -64,7 +64,7 @@ Never text-scrape human-oriented git output (`git branch -vv`, `git stash list`'
 
 ## State and live updates
 
-Backend state (per-repo status, log, branches) is cached in Rust behind `tauri::State`, keyed by repo ID even while the UI only supports one open repo — deliberate groundwork for Phase 3's multi-repo support, since retrofitting repo identity later is expensive and threading it through now is nearly free. A `notify`-based filesystem watcher on `.git/` and the worktree invalidates the cache and emits a `repo-changed` Tauri event, which the frontend subscribes to. There is no polling.
+Backend state (per-repo status, log, branches) is cached in Rust behind `tauri::State`, keyed by repo ID — the multi-repo groundwork this enabled now backs Phase 3's tabs and workspaces. A `notify`-based filesystem watcher (`core::watcher`) invalidates the cache and emits a `repo-changed` Tauri event per repo, which the frontend subscribes to. It watches `.git/` narrowly (top-level files plus `refs/` recursively, not `objects/`) and walks the working tree directory-by-directory, skipping a fixed exclude list (`node_modules`, `target`, `dist`, `build`, ...) — a blanket recursive watch used to include those, and on any repo with an active build writing into `target/`, the resulting inotify flood could peg a CPU core badly enough to make the whole app appear to hang. There is no polling.
 
 ## Offline and content security
 
