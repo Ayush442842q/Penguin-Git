@@ -37,7 +37,7 @@ pub fn delete_branch(
 
     branch::delete_branch(p, &name, force).map_err(to_ipc_error)?;
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::BranchDelete {
             branch_name: name.clone(),
             target_hash,
@@ -67,7 +67,7 @@ pub fn checkout(
 
     branch::checkout(p, &target).map_err(to_ipc_error)?;
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::Checkout { previous_ref },
         format!("Checkout {target}"),
     );
@@ -90,7 +90,7 @@ pub fn checkout_new_branch(
 
     branch::checkout_new(p, &name, start_point.as_deref()).map_err(to_ipc_error)?;
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::Checkout { previous_ref },
         format!("Checkout new branch {name}"),
     );
@@ -114,7 +114,7 @@ pub fn merge_branch(
 
     let state_detector = crate::core::merge_state::detect_operation_state(p);
     if res.is_ok() || state_detector.kind == Some(crate::core::merge_state::OperationKind::Merge) {
-        state.journal.record(
+        state.get_journal(&repo_path).record(
             ActionType::Merge {
                 previous_head,
                 target_ref: branch_name.clone(),
