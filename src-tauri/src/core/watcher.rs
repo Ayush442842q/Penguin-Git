@@ -92,7 +92,10 @@ impl RepoWatcher {
     }
 }
 
-fn watch_git_dir(watcher: &Arc<Mutex<notify::RecommendedWatcher>>, git_dir: &Path) -> notify::Result<()> {
+fn watch_git_dir(
+    watcher: &Arc<Mutex<notify::RecommendedWatcher>>,
+    git_dir: &Path,
+) -> notify::Result<()> {
     if !git_dir.is_dir() {
         return Ok(());
     }
@@ -433,11 +436,7 @@ mod tests {
         std::thread::sleep(Duration::from_millis(150));
 
         for i in 0..20 {
-            std::fs::write(
-                repo.path().join(format!("target/debug/churn-{i}.tmp")),
-                "x",
-            )
-            .unwrap();
+            std::fs::write(repo.path().join(format!("target/debug/churn-{i}.tmp")), "x").unwrap();
         }
 
         std::thread::sleep(DEBOUNCE + Duration::from_millis(600));
