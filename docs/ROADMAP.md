@@ -4,7 +4,7 @@ PenguinGit is being built into a full local-first, Linux-native clone of GitKrak
 
 This is a living document. Check the boxes off as phases land; update the status column as work progresses.
 
-**Last updated:** 2026-08-01 · **Current phase:** 0 and 1 complete, 2 next (Conflicts, rebase, undo/redo)
+**Last updated:** 2026-08-05 · **Current phase:** 0 and 1 complete, 2 in progress (undo/redo shipped in v1.0.0; conflicts and interactive rebase remain)
 
 ## Guiding principles
 
@@ -20,7 +20,7 @@ This is a living document. Check the boxes off as phases land; update the status
 | --- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | 0   | Scaffolding & CI                               | Tooling, linting, testing, and CI foundation before any feature code                                                                                                   | ✅ Done        |
 | 1   | Core git engine & core UI                      | Status, staging, commit, log/graph, diff, branches, stash — done correctly, with a proper DAG lane-layout algorithm and no fragile text-parsing                        | ✅ Done        |
-| 2   | Merge conflicts, interactive rebase, undo/redo | The three hardest, most differentiating git UX flows                                                                                                                   | 🔜 Next        |
+| 2   | Merge conflicts, interactive rebase, undo/redo | The three hardest, most differentiating git UX flows                                                                                                                   | 🟡 In progress |
 | 3   | Multi-repo architecture & submodules           | Tabs, recent-repos, and submodule support (worktree support designed, not yet implemented)                                                                             | 🔜 Not started |
 | 4   | GitKraken MCP server                           | Standalone + embeddable MCP server over the shared core library, with live bidirectional events back to the GUI                                                        | 🔜 Not started |
 | 5   | AI features (bring-your-own key)               | Compose commits, explain commits/branches, PR descriptions — using your own Anthropic/OpenAI key                                                                       | 🔜 Not started |

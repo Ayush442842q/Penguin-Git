@@ -1,6 +1,6 @@
 {
   "name": "penguingit",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A premium, open-source Git GUI built exclusively for Linux.",
   "private": true,
   "type": "module",
