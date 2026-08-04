@@ -21,12 +21,14 @@ pub fn commit_changes(
         .trim()
         .to_string();
 
+    let res = commit::commit(p, &subject, body.as_deref(), amend).map_err(to_ipc_error)?;
+
     state.journal.record(
         ActionType::Commit { previous_head },
         format!("Commit: {subject}"),
     );
 
-    commit::commit(p, &subject, body.as_deref(), amend).map_err(to_ipc_error)
+    Ok(res)
 }
 
 #[tauri::command]
