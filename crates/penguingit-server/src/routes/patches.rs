@@ -55,8 +55,8 @@ pub async fn check_patch_access(
     }
 
     if let Some(ws_id) = patch.workspace_id {
-        let is_member = check_workspace_membership(db, ws_id, user_id).await?;
-        if is_member {
+        let membership_info = check_workspace_membership(db, ws_id, user_id).await?;
+        if membership_info.is_member {
             return Ok(Some(patch));
         }
     }
@@ -76,8 +76,8 @@ pub async fn create_patch(
     }
 
     if let Some(ws_id) = payload.workspace_id {
-        let is_member = check_workspace_membership(&state.db, ws_id, auth_user.id).await?;
-        if !is_member {
+        let membership_info = check_workspace_membership(&state.db, ws_id, auth_user.id).await?;
+        if !membership_info.is_member {
             return Err(ApiError::Forbidden(
                 "You are not a member of this workspace".into(),
             ));
