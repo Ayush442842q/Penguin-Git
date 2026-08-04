@@ -196,8 +196,10 @@ export const interactiveRebase = (repoId, baseRef, todoItems) =>
 export const undoLastAction = (repoId) => invoke("undo_last_action", { repoId: { 0: repoId } });
 export const redoLastAction = (repoId) => invoke("redo_last_action", { repoId: { 0: repoId } });
 
-export const getUndoHistory = () => invoke("get_undo_history");
-export const getRedoHistory = () => invoke("get_redo_history");
+export const getUndoHistory = (repoId) =>
+  invoke("get_undo_history", repoId ? { repoId: { 0: repoId } } : {});
+export const getRedoHistory = (repoId) =>
+  invoke("get_redo_history", repoId ? { repoId: { 0: repoId } } : {});
 
 // -- registry -----------------------------------------------------------------
 
