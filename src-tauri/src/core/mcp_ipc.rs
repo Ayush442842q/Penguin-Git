@@ -58,10 +58,13 @@ pub fn start_mcp_event_listeners(app_handle: AppHandle) {
                             }
 
                             if is_embedded_enabled() {
+                                let remaining_buffered = reader.buffer().to_vec();
                                 let stream = reader.into_inner();
                                 let (read_half, write_half) = stream.into_split();
                                 let chained_read =
-                                    std::io::Cursor::new(line.into_bytes()).chain(read_half);
+                                    std::io::Cursor::new(line.into_bytes())
+                                        .chain(std::io::Cursor::new(remaining_buffered))
+                                        .chain(read_half);
                                 let server = PenguinMcpServer::new();
                                 let _ = server.serve((chained_read, write_half)).await;
                             }
