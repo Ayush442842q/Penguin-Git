@@ -23,7 +23,7 @@ pub fn commit_changes(
 
     let res = commit::commit(p, &subject, body.as_deref(), amend).map_err(to_ipc_error)?;
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::Commit { previous_head },
         format!("Commit: {subject}"),
     );
