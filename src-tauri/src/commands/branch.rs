@@ -35,7 +35,7 @@ pub fn delete_branch(
         .trim()
         .to_string();
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::BranchDelete {
             branch_name: name.clone(),
             target_hash,
@@ -63,7 +63,7 @@ pub fn checkout(
         .trim()
         .to_string();
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::Checkout { previous_ref },
         format!("Checkout {target}"),
     );
@@ -84,7 +84,7 @@ pub fn checkout_new_branch(
         .trim()
         .to_string();
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::Checkout { previous_ref },
         format!("Checkout new branch {name}"),
     );
@@ -104,7 +104,7 @@ pub fn merge_branch(
         .trim()
         .to_string();
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::Merge {
             previous_head,
             target_ref: branch_name.clone(),

@@ -21,7 +21,7 @@ pub fn commit_changes(
         .trim()
         .to_string();
 
-    state.journal.record(
+    state.get_journal(&repo_path).record(
         ActionType::Commit { previous_head },
         format!("Commit: {subject}"),
     );

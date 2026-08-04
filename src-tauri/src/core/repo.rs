@@ -44,7 +44,7 @@ pub struct RepoState {
 /// collapse it to a single `RepoState` just because Phase 1 only uses one entry.
 pub struct AppState {
     repos: Mutex<HashMap<RepoId, RepoState>>,
-    pub journal: crate::core::undo::ActionJournal,
+    journals: Mutex<HashMap<String, std::sync::Arc<crate::core::undo::ActionJournal>>>,
     pub registry: crate::core::repo_registry::RepoRegistry,
 }
 
@@ -73,7 +73,7 @@ impl AppState {
             });
         Self {
             repos: Mutex::new(HashMap::new()),
-            journal: crate::core::undo::ActionJournal::new(),
+            journals: Mutex::new(HashMap::new()),
             registry,
         }
     }
@@ -83,9 +83,23 @@ impl AppState {
             .expect("in-memory sqlite db creation should never fail");
         Self {
             repos: Mutex::new(HashMap::new()),
-            journal: crate::core::undo::ActionJournal::new(),
+            journals: Mutex::new(HashMap::new()),
             registry,
         }
+    }
+
+    pub fn get_journal(&self, repo_path: &str) -> std::sync::Arc<crate::core::undo::ActionJournal> {
+        let mut journals = self.journals.lock().expect("journals mutex poisoned");
+        let canonical_path = Path::new(repo_path)
+            .canonicalize()
+            .unwrap_or_else(|_| PathBuf::from(repo_path))
+            .to_string_lossy()
+            .into_owned();
+
+        journals
+            .entry(canonical_path)
+            .or_insert_with(|| std::sync::Arc::new(crate::core::undo::ActionJournal::new()))
+            .clone()
     }
 
     pub fn insert(&self, state: RepoState) {
@@ -325,4 +339,26 @@ mod tests {
 
         assert!(open_repo(&nested).is_err());
     }
+
+    #[test]
+    fn test_scoped_journals_are_isolated() {
+        let state = AppState::with_in_memory_registry();
+
+        let path1 = "/path/to/repo1";
+        let path2 = "/path/to/repo2";
+
+        let journal1 = state.get_journal(path1);
+        let journal2 = state.get_journal(path2);
+
+        journal1.record(
+            crate::core::undo::ActionType::Checkout {
+                previous_ref: "main".into(),
+            },
+            "Checkout in repo1",
+        );
+
+        assert_eq!(journal1.get_history().len(), 1);
+        assert_eq!(journal2.get_history().len(), 0);
+    }
 }
+

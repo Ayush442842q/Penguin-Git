@@ -12,7 +12,7 @@ pub fn undo_last_action(
         .get(&repo_id)
         .ok_or_else(|| format!("Unknown repository: {}", repo_id.as_str()))?;
     state
-        .journal
+        .get_journal(&repo.path.to_string_lossy())
         .undo_latest(&repo.path)
         .map_err(|e| e.to_string())
 }
@@ -26,17 +26,37 @@ pub fn redo_last_action(
         .get(&repo_id)
         .ok_or_else(|| format!("Unknown repository: {}", repo_id.as_str()))?;
     state
-        .journal
+        .get_journal(&repo.path.to_string_lossy())
         .redo_latest(&repo.path)
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn get_undo_history(state: State<'_, AppState>) -> Result<Vec<ActionSnapshot>, String> {
-    Ok(state.journal.get_history())
+pub fn get_undo_history(
+    state: State<'_, AppState>,
+    repo_id: Option<RepoId>,
+) -> Result<Vec<ActionSnapshot>, String> {
+    if let Some(id) = repo_id {
+        let repo = state
+            .get(&id)
+            .ok_or_else(|| format!("Unknown repository: {}", id.as_str()))?;
+        Ok(state.get_journal(&repo.path.to_string_lossy()).get_history())
+    } else {
+        Ok(Vec::new())
+    }
 }
 
 #[tauri::command]
-pub fn get_redo_history(state: State<'_, AppState>) -> Result<Vec<ActionSnapshot>, String> {
-    Ok(state.journal.get_redo_history())
+pub fn get_redo_history(
+    state: State<'_, AppState>,
+    repo_id: Option<RepoId>,
+) -> Result<Vec<ActionSnapshot>, String> {
+    if let Some(id) = repo_id {
+        let repo = state
+            .get(&id)
+            .ok_or_else(|| format!("Unknown repository: {}", id.as_str()))?;
+        Ok(state.get_journal(&repo.path.to_string_lossy()).get_redo_history())
+    } else {
+        Ok(Vec::new())
+    }
 }
