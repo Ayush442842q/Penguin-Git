@@ -1,0 +1,16 @@
+{
+  "$comment": "Invariants that make a change wrong even when it compiles and passes tests. Checked by hand, not a linter — grep for the pattern before merging.",
+  "project": "PenguinGit",
+  "invariants": {
+    "core-adapter-split": "Every #[tauri::command] in src-tauri/src/commands/ is a thin adapter: parse args, call into core::, serialize the result. No Command::new(\"git\") or git-invocation logic outside src-tauri/src/core/exec.rs and the core modules that use it.",
+    "structured-git-output-only": "Every git subcommand parsed for output uses a structured, machine-readable format (--porcelain=v2 -z for status, NUL-delimited --pretty=format for log, git rev-list --left-right --count for ahead/behind). Never text-scrape human-oriented git output.",
+    "one-credential-vault": "All secrets (GitHub PAT, AI provider keys, cloud auth tokens) go through the OS keychain via the keyring crate. Never plaintext, never localStorage.",
+    "no-network-by-default": "The desktop app makes no network requests of its own. Fonts are bundled via @fontsource, not fetched from a CDN. tauri.conf.json's CSP stays default-src 'self'. pnpm tauri dev with networking disabled must keep working.",
+    "blocking-io-off-the-command-thread": "Anything that can block (OS keychain D-Bus calls, filesystem walks over an unbounded tree) runs through tauri::async_runtime::spawn_blocking, never inline in a sync #[tauri::command]. Learned from the mcp_ipc.rs startup panic and the keyring PAT-save freeze (see decisions/0002).",
+    "watcher-excludes-build-output": "The repo file watcher (core/watcher.rs) never recursively watches build/dependency directories (target/, node_modules/, dist/, ...). Learned from the CPU-storm freeze when a build was running in a watched repo (see decisions/0001)."
+  },
+  "freeze_boundary": [
+    "src-tauri/src/core/** requires a matching unit test against FixtureRepo for any new git-invocation logic",
+    "src-tauri/capabilities/** changes need a one-line reason in the PR description — this is the app's permission surface"
+  ]
+}
