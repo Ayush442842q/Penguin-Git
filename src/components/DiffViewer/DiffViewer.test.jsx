@@ -121,6 +121,44 @@ describe("DiffViewer", () => {
         );
       });
     });
+
+    it("stages hunk for untracked files using original diff headers", async () => {
+      const UNTRACKED_DIFF = [
+        "diff --git a/dev/null b/new.txt",
+        "new file mode 100644",
+        "index 0000000..3333333",
+        "--- /dev/null",
+        "+++ b/new.txt",
+        "@@ -0,0 +1,1 @@",
+        "+first line",
+      ].join("\n");
+
+      bridge.getUntrackedDiff.mockResolvedValue(UNTRACKED_DIFF);
+      setStore({ selectedFile: { path: "new.txt", staged: false, untracked: true } });
+
+      render(<DiffViewer />);
+
+      await waitFor(() => expect(screen.getByText("+ Stage Hunk")).toBeInTheDocument());
+
+      const stageBtn = screen.getByText("+ Stage Hunk");
+      fireEvent.click(stageBtn);
+
+      await waitFor(() => {
+        expect(bridge.gitStageHunk).toHaveBeenCalledWith(
+          "/repo",
+          [
+            "diff --git a/dev/null b/new.txt",
+            "new file mode 100644",
+            "index 0000000..3333333",
+            "--- /dev/null",
+            "+++ b/new.txt",
+            "@@ -0,0 +1,1 @@",
+            "+first line",
+            "",
+          ].join("\n")
+        );
+      });
+    });
   });
 
   describe("tabs", () => {
