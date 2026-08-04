@@ -15,6 +15,7 @@
 </p>
 
 ---
+
 ***If you get any error or any feature request just report in the issue section I will try to fix as soon as i can.
 PenguinGit brings GitKraken's visual power to the Linux desktop — including the features GitKraken gates behind Pro — with no login wall and no repository data leaving your machine. A Rust backend shells out to your own `git`, so your SSH agent, GPG signing, and credential helpers keep working automatically.
 
