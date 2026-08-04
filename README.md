@@ -83,9 +83,9 @@ Read [CONTRIBUTING.md](docs/CONTRIBUTING.md) first — it covers the rule that m
 ## Security
 
 For security vulnerability notices or dependency audit findings:
+
 - react-router has been upgraded to v8.3.0+ to resolve the high-severity CSRF vulnerability (GHSA-qwww-vcr4-c8h2).
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
