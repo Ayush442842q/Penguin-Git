@@ -188,7 +188,8 @@ describe("repoStore", () => {
     await openFixtureRepo();
 
     git.getStatus.mockClear();
-    changeHandler({ payload: { repo_id: "/repo" } });
+    // Test with the realistic camelCase repoId payload
+    changeHandler({ payload: { repoId: "/repo" } });
 
     expect(git.getStatus).toHaveBeenCalledWith("/repo");
   });
