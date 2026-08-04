@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub id: Uuid,
     pub username: String,
@@ -11,6 +12,7 @@ pub struct User {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserPublic {
     pub id: Uuid,
     pub username: String,
@@ -19,6 +21,7 @@ pub struct UserPublic {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 #[allow(dead_code)]
+#[serde(rename_all = "camelCase")]
 pub struct Token {
     pub token: String,
     pub user_id: Uuid,
@@ -26,6 +29,7 @@ pub struct Token {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct Patch {
     pub id: Uuid,
     pub workspace_id: Option<Uuid>,
@@ -39,6 +43,7 @@ pub struct Patch {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct PatchComment {
     pub id: Uuid,
     pub patch_id: Uuid,
@@ -48,6 +53,7 @@ pub struct PatchComment {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct Workspace {
     pub id: Uuid,
     pub name: String,
@@ -57,6 +63,7 @@ pub struct Workspace {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 #[allow(dead_code)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkspaceMember {
     pub workspace_id: Uuid,
     pub user_id: Uuid,
@@ -64,6 +71,7 @@ pub struct WorkspaceMember {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
 pub struct WorkspaceRepo {
     pub workspace_id: Uuid,
     pub repo_name: String,
