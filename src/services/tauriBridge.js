@@ -277,6 +277,8 @@ export const previewPatch = (repoPath, patchContent) =>
 export const applyPatch = (repoPath, patchContent) =>
   invoke("apply_patch", { repoPath, patchContent });
 
+export const writePatchFile = (path, content) => invoke("write_patch_file", { path, content });
+
 export async function savePatchFile(defaultName) {
   const selected = await saveDialog({
     defaultPath: defaultName,
