@@ -864,7 +864,7 @@ mod tests {
 
     #[test]
     fn parse_numstat_reads_added_and_deleted_files() {
-        let raw = "3\t0\tsrc/new.rs\00\t5\tsrc/removed.rs\0";
+        let raw = "3\t0\tsrc/new.rs\x000\t5\tsrc/removed.rs\0";
         let files = parse_numstat(raw);
 
         assert_eq!(
@@ -902,7 +902,7 @@ mod tests {
 
     #[test]
     fn parse_commit_detail_meta_keeps_full_multiline_body() {
-        let record = "abc123\0Ada Lovelace\0ada@example.invalid\01700000000\0parent1 parent2\0HEAD -> main, tag: v1.0\0Subject line\n\nBody paragraph one.\nBody paragraph two.\n";
+        let record = "abc123\0Ada Lovelace\0ada@example.invalid\x001700000000\0parent1 parent2\0HEAD -> main, tag: v1.0\0Subject line\n\nBody paragraph one.\nBody paragraph two.\n";
         let details = parse_commit_detail_meta(record).expect("should parse");
 
         assert_eq!(details.hash, "abc123");
@@ -918,7 +918,7 @@ mod tests {
 
     #[test]
     fn parse_commit_detail_meta_rejects_empty_hash() {
-        assert!(parse_commit_detail_meta("\0a\0b\00\0\0\0").is_none());
+        assert!(parse_commit_detail_meta("\0a\0b\x000\0\0\0").is_none());
     }
 
     #[test]
