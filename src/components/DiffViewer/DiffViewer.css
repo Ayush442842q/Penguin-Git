@@ -80,7 +80,7 @@
   font-family: inherit;
   font-size: 13px;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .commit-detail-byline {

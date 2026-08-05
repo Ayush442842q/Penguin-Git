@@ -89,10 +89,15 @@ pub fn get_commit_details(repo_path: &Path, hash: &str) -> Result<CommitDetails,
         stderr: format!("could not parse commit metadata for {hash}"),
     })?;
 
-    // `-z` NUL-delimits records so renamed/spaced paths never need scraping;
-    // no `-M` means rename detection stays off, matching every other numstat
-    // caller in this codebase, so each record is always exactly 3 fields.
-    let stat_raw = run_git(repo_path, &["show", "-z", "--numstat", "--format=", hash])?;
+    // `-z` NUL-delimits records so spaced paths never need scraping.
+    // `--no-renames` is explicit rather than relying on rename detection being
+    // off by default: a user's global `diff.renames` config can turn it on,
+    // and a detected rename adds a second NUL-terminated path field per
+    // record, which `parse_numstat` (always-3-fields) doesn't expect.
+    let stat_raw = run_git(
+        repo_path,
+        &["show", "-z", "--no-renames", "--numstat", "--format=", hash],
+    )?;
     meta.files = parse_numstat(&stat_raw);
 
     Ok(meta)
@@ -936,5 +941,41 @@ mod tests {
         assert_eq!(details.files[0].path, "a.txt");
         assert_eq!(details.files[0].insertions, Some(1));
         assert_eq!(details.files[0].deletions, Some(0));
+    }
+
+    #[test]
+    fn get_commit_details_reports_a_rename_as_a_plain_delete_and_add() {
+        // `--no-renames` means a rename must come back as two ordinary
+        // records (old path fully removed, new path fully added), never the
+        // two-path-per-record form `parse_numstat` doesn't handle.
+        let repo = FixtureRepo::new();
+        repo.commit(
+            "before.txt",
+            "stable content here\nline two\n",
+            "Add before.txt",
+        );
+        repo.git(&["mv", "before.txt", "after.txt"]);
+        let hash = repo.commit_all("Rename to after.txt");
+
+        let details =
+            get_commit_details(repo.path(), &hash).expect("commit details should succeed");
+
+        assert_eq!(details.files.len(), 2, "a plain delete plus a plain add");
+
+        let removed = details
+            .files
+            .iter()
+            .find(|f| f.path == "before.txt")
+            .expect("before.txt should appear as a full deletion");
+        assert_eq!(removed.insertions, Some(0));
+        assert_eq!(removed.deletions, Some(2));
+
+        let added = details
+            .files
+            .iter()
+            .find(|f| f.path == "after.txt")
+            .expect("after.txt should appear as a full addition");
+        assert_eq!(added.insertions, Some(2));
+        assert_eq!(added.deletions, Some(0));
     }
 }
