@@ -20,6 +20,15 @@ pub fn get_commit_diff(repo_path: String, hash: String) -> Result<String, String
 }
 
 #[tauri::command]
+pub fn get_commit_file_diff(
+    repo_path: String,
+    hash: String,
+    path: String,
+) -> Result<String, String> {
+    diff::diff_commit_file(Path::new(&repo_path), &hash, &path).map_err(to_ipc_error)
+}
+
+#[tauri::command]
 pub fn get_file_history(
     repo_path: String,
     path: String,

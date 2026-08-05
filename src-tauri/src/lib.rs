@@ -30,10 +30,12 @@ pub fn run() {
             // log / graph
             commands::log::get_git_log,
             commands::log::get_commit_graph,
+            commands::log::get_commit_details,
             // diff
             commands::diff::get_file_diff,
             commands::diff::get_untracked_diff,
             commands::diff::get_commit_diff,
+            commands::diff::get_commit_file_diff,
             commands::diff::get_file_history,
             commands::diff::get_blame,
             // staging

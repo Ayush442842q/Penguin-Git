@@ -41,6 +41,120 @@
   font-size: 12px;
 }
 
+/* ------------------------------------------------------------------ */
+/* Commit detail                                                       */
+/* ------------------------------------------------------------------ */
+
+.commit-detail {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 14px;
+}
+
+.commit-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.commit-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.commit-detail-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.commit-detail-body {
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.commit-detail-byline {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.commit-detail-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.commit-hash-copy {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.commit-detail-files {
+  list-style: none;
+  margin-top: 12px;
+}
+
+.commit-detail-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.commit-detail-file:hover {
+  background: var(--bg-hover);
+}
+
+.commit-detail-file.selected {
+  background: var(--bg-active);
+}
+
+.commit-detail-file .file-path {
+  flex: 1;
+  min-width: 0;
+}
+
+.commit-detail-stat-counts {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.commit-detail-stat-bar {
+  flex-shrink: 0;
+  display: flex;
+  width: 48px;
+  height: 8px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--bg-active);
+}
+
+.commit-detail-stat-add {
+  background: var(--accent-green);
+}
+
+.commit-detail-stat-del {
+  background: var(--accent-red);
+}
+
 .diff-body,
 .blame-body {
   flex: 1;

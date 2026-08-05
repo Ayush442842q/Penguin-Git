@@ -44,6 +44,111 @@ pub fn get_log(repo_path: &Path, limit: usize) -> Result<Vec<Commit>, GitError> 
     Ok(parse_log(&raw))
 }
 
+/// Format for the single-record metadata half of [`get_commit_details`]. `%B`
+/// is last and unterminated — it's the raw commit message, which can contain
+/// anything short of a NUL byte, so it must not be followed by more fields.
+const COMMIT_DETAIL_FORMAT: &str = "--format=%H%x00%an%x00%ae%x00%at%x00%P%x00%D%x00%B";
+
+/// Per-file line-count stats for one commit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitFileStat {
+    pub path: String,
+    /// `None` for a binary file — git's numstat reports `-` rather than a count.
+    pub insertions: Option<u32>,
+    pub deletions: Option<u32>,
+}
+
+/// Everything a commit-detail view needs beyond the summary [`Commit`] row:
+/// the full message body and per-file change stats, in one round trip.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitDetails {
+    pub hash: String,
+    pub author_name: String,
+    pub author_email: String,
+    pub timestamp: i64,
+    pub parents: Vec<String>,
+    pub refs: Vec<String>,
+    /// Full commit message: subject, blank line, body — unlike `Commit::subject`
+    /// which is first-line-only.
+    pub body: String,
+    pub files: Vec<CommitFileStat>,
+}
+
+/// Reads full commit metadata, message body, and per-file change stats.
+///
+/// Two `git show` calls rather than one combined format: mixing `--numstat`
+/// output into the same record as `%B` has no unambiguous terminator, since a
+/// commit message can itself contain anything short of a NUL byte. Splitting
+/// the two concerns keeps both parses simple instead of one fragile one.
+pub fn get_commit_details(repo_path: &Path, hash: &str) -> Result<CommitDetails, GitError> {
+    let meta_raw = run_git(repo_path, &["show", "-s", COMMIT_DETAIL_FORMAT, hash])?;
+    let mut meta = parse_commit_detail_meta(&meta_raw).ok_or_else(|| GitError::CommandFailed {
+        exit_code: None,
+        stderr: format!("could not parse commit metadata for {hash}"),
+    })?;
+
+    // `-z` NUL-delimits records so spaced paths never need scraping.
+    // `--no-renames` is explicit rather than relying on rename detection being
+    // off by default: a user's global `diff.renames` config can turn it on,
+    // and a detected rename adds a second NUL-terminated path field per
+    // record, which `parse_numstat` (always-3-fields) doesn't expect.
+    let stat_raw = run_git(
+        repo_path,
+        &["show", "-z", "--no-renames", "--numstat", "--format=", hash],
+    )?;
+    meta.files = parse_numstat(&stat_raw);
+
+    Ok(meta)
+}
+
+fn parse_commit_detail_meta(record: &str) -> Option<CommitDetails> {
+    let mut fields = record.splitn(7, FIELD_SEP);
+    let hash = fields.next()?.to_string();
+    if hash.is_empty() {
+        return None;
+    }
+
+    Some(CommitDetails {
+        hash,
+        author_name: fields.next()?.to_string(),
+        author_email: fields.next()?.to_string(),
+        timestamp: fields.next()?.trim().parse().unwrap_or(0),
+        parents: fields
+            .next()?
+            .split_whitespace()
+            .map(str::to_string)
+            .collect(),
+        refs: fields
+            .next()?
+            .split(", ")
+            .map(str::trim)
+            .filter(|r| !r.is_empty())
+            .map(str::to_string)
+            .collect(),
+        body: fields.next().unwrap_or_default().trim_end().to_string(),
+        files: Vec::new(),
+    })
+}
+
+fn parse_numstat(raw: &str) -> Vec<CommitFileStat> {
+    raw.split('\0')
+        .filter(|record| !record.is_empty())
+        .filter_map(|record| {
+            let mut parts = record.splitn(3, '\t');
+            let insertions = parts.next()?;
+            let deletions = parts.next()?;
+            let path = parts.next()?.to_string();
+            Some(CommitFileStat {
+                path,
+                insertions: insertions.parse().ok(),
+                deletions: deletions.parse().ok(),
+            })
+        })
+        .collect()
+}
+
 /// Parses the output of `git log` with [`LOG_FORMAT`].
 ///
 /// Pure so it can be tested against records that are awkward to produce with a
@@ -758,5 +863,119 @@ mod tests {
                 assert!(slot.lane < layout.lane_count);
             }
         }
+    }
+
+    // -- Commit details --------------------------------------------------
+
+    #[test]
+    fn parse_numstat_reads_added_and_deleted_files() {
+        let raw = "3\t0\tsrc/new.rs\x000\t5\tsrc/removed.rs\0";
+        let files = parse_numstat(raw);
+
+        assert_eq!(
+            files,
+            vec![
+                CommitFileStat {
+                    path: "src/new.rs".into(),
+                    insertions: Some(3),
+                    deletions: Some(0),
+                },
+                CommitFileStat {
+                    path: "src/removed.rs".into(),
+                    insertions: Some(0),
+                    deletions: Some(5),
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_numstat_treats_dash_as_binary_file() {
+        let raw = "-\t-\tassets/logo.png\0";
+        let files = parse_numstat(raw);
+
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].path, "assets/logo.png");
+        assert_eq!(files[0].insertions, None);
+        assert_eq!(files[0].deletions, None);
+    }
+
+    #[test]
+    fn parse_numstat_ignores_empty_input() {
+        assert!(parse_numstat("").is_empty());
+    }
+
+    #[test]
+    fn parse_commit_detail_meta_keeps_full_multiline_body() {
+        let record = "abc123\0Ada Lovelace\0ada@example.invalid\x001700000000\0parent1 parent2\0HEAD -> main, tag: v1.0\0Subject line\n\nBody paragraph one.\nBody paragraph two.\n";
+        let details = parse_commit_detail_meta(record).expect("should parse");
+
+        assert_eq!(details.hash, "abc123");
+        assert_eq!(details.author_name, "Ada Lovelace");
+        assert_eq!(details.parents, vec!["parent1", "parent2"]);
+        assert_eq!(details.refs, vec!["HEAD -> main", "tag: v1.0"]);
+        assert_eq!(
+            details.body,
+            "Subject line\n\nBody paragraph one.\nBody paragraph two."
+        );
+        assert!(details.files.is_empty(), "files are filled in separately");
+    }
+
+    #[test]
+    fn parse_commit_detail_meta_rejects_empty_hash() {
+        assert!(parse_commit_detail_meta("\0a\0b\x000\0\0\0").is_none());
+    }
+
+    #[test]
+    fn get_commit_details_reads_body_and_file_stats_from_a_real_repo() {
+        let repo = FixtureRepo::new();
+        repo.commit("a.txt", "one\ntwo\n", "First");
+        let hash = repo.commit("a.txt", "one\ntwo\nthree\n", "Second\n\nWith a body.");
+
+        let details =
+            get_commit_details(repo.path(), &hash).expect("commit details should succeed");
+
+        assert_eq!(details.hash, hash);
+        assert_eq!(details.body, "Second\n\nWith a body.");
+        assert_eq!(details.files.len(), 1);
+        assert_eq!(details.files[0].path, "a.txt");
+        assert_eq!(details.files[0].insertions, Some(1));
+        assert_eq!(details.files[0].deletions, Some(0));
+    }
+
+    #[test]
+    fn get_commit_details_reports_a_rename_as_a_plain_delete_and_add() {
+        // `--no-renames` means a rename must come back as two ordinary
+        // records (old path fully removed, new path fully added), never the
+        // two-path-per-record form `parse_numstat` doesn't handle.
+        let repo = FixtureRepo::new();
+        repo.commit(
+            "before.txt",
+            "stable content here\nline two\n",
+            "Add before.txt",
+        );
+        repo.git(&["mv", "before.txt", "after.txt"]);
+        let hash = repo.commit_all("Rename to after.txt");
+
+        let details =
+            get_commit_details(repo.path(), &hash).expect("commit details should succeed");
+
+        assert_eq!(details.files.len(), 2, "a plain delete plus a plain add");
+
+        let removed = details
+            .files
+            .iter()
+            .find(|f| f.path == "before.txt")
+            .expect("before.txt should appear as a full deletion");
+        assert_eq!(removed.insertions, Some(0));
+        assert_eq!(removed.deletions, Some(2));
+
+        let added = details
+            .files
+            .iter()
+            .find(|f| f.path == "after.txt")
+            .expect("after.txt should appear as a full addition");
+        assert_eq!(added.insertions, Some(2));
+        assert_eq!(added.deletions, Some(0));
     }
 }
