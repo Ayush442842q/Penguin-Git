@@ -6,7 +6,6 @@ All notable changes to this project are documented here. Format loosely follows 
 
 Nothing currently in flight. The only confirmed gap versus the full Phase 0–7 scope is worktree support (part of Phase 3) — see [ROADMAP.md](ROADMAP.md#phases).
 
-
 ## v1.1.0 — Collapsible panels, commit details, and launchpad fixes (2026-08-05)
 
 ### Added
@@ -20,7 +19,6 @@ Nothing currently in flight. The only confirmed gap versus the full Phase 0–7 
 
 - Vite dev-server watcher now ignores the cargo workspace `target/` directory, preventing `ENOSPC` inotify limits exhaustion during concurrent cargo builds (PR #92)
 - Re-check GitHub token status when the Settings modal is closed, clearing the "GitHub Personal Access Token is required" warning banner immediately without requiring a manual refresh
-
 
 ## v1.0.0 — First stable release (2026-08-05)
 
