@@ -6,6 +6,22 @@ All notable changes to this project are documented here. Format loosely follows 
 
 Nothing currently in flight. The only confirmed gap versus the full Phase 0–7 scope is worktree support (part of Phase 3) — see [ROADMAP.md](ROADMAP.md#phases).
 
+
+## v1.1.0 — Collapsible panels, commit details, and launchpad fixes (2026-08-05)
+
+### Added
+
+- A GitKraken/GitLens-style commit detail panel displaying the full commit message body, author avatar, relative timestamp, branch/tag refs, and a per-file +/- stat list above the diff (PR #94)
+- Ability to scope the diff viewer to a single file by clicking it in the commit detail panel file list (PR #94)
+- Local author avatars generated from initials on a colored circle, maintaining the app's zero-network-request design (PR #94)
+- Collapsible panels for the sidebar, commit graph, and detail panel, toggleable via header icons or handle chevrons, with panel dimensions and collapsed states persisted in `localStorage` separately from drag sizes (PR #93)
+
+### Fixed
+
+- Vite dev-server watcher now ignores the cargo workspace `target/` directory, preventing `ENOSPC` inotify limits exhaustion during concurrent cargo builds (PR #92)
+- Re-check GitHub token status when the Settings modal is closed, clearing the "GitHub Personal Access Token is required" warning banner immediately without requiring a manual refresh
+
+
 ## v1.0.0 — First stable release (2026-08-05)
 
 **Correction (2026-08-05):** this entry originally said "The Phase 0 + Phase 1 feature set from
