@@ -363,7 +363,13 @@ export default function Launchpad({ isOpen, onClose }) {
         </div>
       )}
 
-      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <Settings
+        isOpen={showSettings}
+        onClose={() => {
+          setShowSettings(false);
+          fetchItems();
+        }}
+      />
     </div>
   );
 }

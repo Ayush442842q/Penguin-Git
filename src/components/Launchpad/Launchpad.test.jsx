@@ -14,6 +14,18 @@ vi.mock("../../services/tauriBridge", () => ({
   getBranches: vi.fn(),
 }));
 
+// Stand in for the real Settings modal — this suite only cares that closing
+// it re-checks token state, not the GitHubPanel form internals covered
+// elsewhere in Settings.test.jsx.
+vi.mock("../Settings/Settings", () => ({
+  default: ({ isOpen, onClose }) =>
+    isOpen ? (
+      <button type="button" onClick={onClose}>
+        close-settings
+      </button>
+    ) : null,
+}));
+
 describe("Launchpad Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -112,6 +124,33 @@ describe("Launchpad Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/GitHub Personal Access Token is required/)).toBeInTheDocument();
+    });
+  });
+
+  it("re-checks token status when Settings is closed, clearing the warning banner", async () => {
+    tauriBridge.getGithubToken.mockResolvedValue(false);
+
+    render(
+      <MemoryRouter>
+        <Launchpad isOpen={true} onClose={() => {}} />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/GitHub Personal Access Token is required/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Open Settings"));
+    expect(screen.getByText("close-settings")).toBeInTheDocument();
+
+    // Simulate the user saving a PAT while Settings was open.
+    tauriBridge.getGithubToken.mockResolvedValue(true);
+    fireEvent.click(screen.getByText("close-settings"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/GitHub Personal Access Token is required/)
+      ).not.toBeInTheDocument();
     });
   });
 

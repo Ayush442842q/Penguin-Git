@@ -1,6 +1,6 @@
 [package]
 name = "penguingit"
-version = "1.0.0"
+version = "1.1.0"
 description = "A premium, open-source Git GUI built exclusively for Linux."
 authors = ["PenguinGit Contributors"]
 license = "MIT"
