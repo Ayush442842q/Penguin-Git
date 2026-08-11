@@ -10,20 +10,6 @@
   padding-bottom: 12px;
 }
 
-.remote-actions {
-  display: flex;
-  gap: 5px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.remote-actions button {
-  flex: 1;
-  justify-content: center;
-  padding: 5px 6px;
-  font-size: 11px;
-}
-
 .sidebar-section {
   border-bottom: 1px solid var(--border-subtle);
 }

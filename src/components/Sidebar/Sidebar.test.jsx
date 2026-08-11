@@ -43,59 +43,7 @@ describe("Sidebar", () => {
     expect(screen.getByTitle("/repo")).toHaveTextContent("repo");
   });
 
-  describe("remote actions", () => {
-    it("fetches from all remotes", () => {
-      render(<Sidebar />);
-      fireEvent.click(screen.getByText("Fetch"));
 
-      expect(bridge.fetch).toHaveBeenCalledWith("/repo", null);
-    });
-
-    it("pulls", () => {
-      render(<Sidebar />);
-      fireEvent.click(screen.getByText("Pull"));
-
-      expect(bridge.pull).toHaveBeenCalled();
-    });
-
-    it("pushes to an existing upstream without re-setting it", () => {
-      setStore({ status: { ...CLEAN_STATUS, upstream: "origin/main", ahead: 1 } });
-      stubRun();
-
-      render(<Sidebar />);
-      fireEvent.click(screen.getByText(/push/i));
-
-      expect(bridge.push).toHaveBeenCalledWith("/repo", null, null, false);
-    });
-
-    it("sets the upstream when pushing a branch that has none", () => {
-      setStore({ status: { ...CLEAN_STATUS, upstream: null, branch: "spike" } });
-      stubRun();
-
-      render(<Sidebar />);
-      fireEvent.click(screen.getByText(/push/i));
-
-      // Without `-u` the very first push of a new branch fails.
-      expect(bridge.push).toHaveBeenCalledWith("/repo", "origin", "spike", true);
-    });
-
-    it("shows pending counts on pull and push", () => {
-      setStore({ status: { ...CLEAN_STATUS, upstream: "origin/main", ahead: 3, behind: 2 } });
-      stubRun();
-
-      render(<Sidebar />);
-      expect(screen.getByText("3")).toBeInTheDocument();
-      expect(screen.getByText("2")).toBeInTheDocument();
-    });
-
-    it("disables remote actions while an operation is running", () => {
-      setStore({ busy: true });
-      render(<Sidebar />);
-
-      expect(screen.getByText("Fetch")).toBeDisabled();
-      expect(screen.getByText("Pull")).toBeDisabled();
-    });
-  });
 
   describe("remotes list", () => {
     it("stays collapsed until asked for", () => {

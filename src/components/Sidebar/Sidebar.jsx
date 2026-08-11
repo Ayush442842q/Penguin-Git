@@ -38,31 +38,6 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-scroll">
-        <div className="remote-actions">
-          <button disabled={busy} onClick={() => run((path) => git.fetch(path, null))}>
-            Fetch
-          </button>
-          <button disabled={busy} onClick={() => run(git.pull)}>
-            Pull {behind > 0 && <span className="badge badge-blue">{behind}</span>}
-          </button>
-          <button
-            disabled={busy}
-            title={hasUpstream ? "Push to upstream" : "Push and set upstream"}
-            onClick={() =>
-              run((path) =>
-                git.push(
-                  path,
-                  hasUpstream ? null : "origin",
-                  hasUpstream ? null : status?.branch,
-                  !hasUpstream
-                )
-              )
-            }
-          >
-            Push {ahead > 0 && <span className="badge badge-green">{ahead}</span>}
-          </button>
-        </div>
-
         <BranchPanel />
         <StashPanel />
         <SubmodulePanel />

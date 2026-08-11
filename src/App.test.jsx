@@ -170,7 +170,7 @@ describe("App", () => {
   it("hides the divergence line when there is no upstream", () => {
     renderWithOpenRepo({ status: { ...CLEAN_STATUS, upstream: null } });
 
-    expect(screen.queryByText(/↑/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/origin\/main/)).not.toBeInTheDocument();
   });
 
   it("shows an error in the status bar instead of the normal summary", () => {
