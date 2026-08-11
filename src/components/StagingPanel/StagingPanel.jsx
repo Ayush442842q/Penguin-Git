@@ -43,15 +43,92 @@ function Section({ title, entries, children }) {
   );
 }
 
+function getInitials(name) {
+  if (!name) return "";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function CommitDetailView({ commit, onDeselect }) {
+  const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState("path"); // path or tree
+
+  const handleCopyHash = () => {
+    navigator.clipboard.writeText(commit.hash);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const initials = getInitials(commit.authorName);
+  const formattedDate = commit.timestamp
+    ? new Date(commit.timestamp * 1000).toLocaleString()
+    : "";
+
+  return (
+    <div className="commit-detail-header-card">
+      <div className="commit-detail-top-bar">
+        <span className="commit-detail-sha">commit: {commit.shortHash}</span>
+        <div className="commit-detail-actions">
+          <button className="ghost icon-btn" onClick={handleCopyHash} title="Copy commit SHA">
+            {copied ? "✓ Copied" : "📋"}
+          </button>
+          <button className="ghost icon-btn" onClick={onDeselect} title="Return to working changes">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div className="commit-detail-subject">{commit.subject}</div>
+
+      <div className="commit-detail-author-row">
+        <div className="commit-author-avatar">{initials}</div>
+        <div className="commit-author-meta">
+          <span className="author-name">{commit.authorName}</span>
+          <span className="authored-date">{formattedDate}</span>
+        </div>
+      </div>
+
+      <div className="commit-detail-view-bar">
+        <span className="section-label">Commit Details</span>
+        <div className="view-mode-toggle">
+          <button
+            className={`ghost view-btn ${viewMode === "path" ? "active" : ""}`}
+            onClick={() => setViewMode("path")}
+          >
+            ≡ Path
+          </button>
+          <button
+            className={`ghost view-btn ${viewMode === "tree" ? "active" : ""}`}
+            onClick={() => setViewMode("tree")}
+          >
+            🌲 Tree
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function StagingPanel() {
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const slice = useRepoStore((s) => s.repos[activeRepoId]);
   const repo = slice?.repo;
   const status = slice?.status;
+  const commits = slice?.commits || [];
+  const selectedCommitHash = slice?.selectedCommit;
   const selectedFile = slice?.selectedFile;
   const selectFile = useRepoStore((s) => s.selectFile);
+  const selectCommit = useRepoStore((s) => s.selectCommit);
   const busy = useRepoStore((s) => s.busy);
   const run = useRepoStore((s) => s.run);
+
+  const selectedCommit =
+    selectedCommitHash && selectedCommitHash !== "__wip__"
+      ? commits.find((c) => c.hash === selectedCommitHash)
+      : null;
 
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -77,8 +154,6 @@ export default function StagingPanel() {
     }
   };
 
-  // Amending without the previous message pre-filled means retyping it from
-  // memory, and an empty box silently replaces a good message with a worse one.
   useEffect(() => {
     if (!amend || !repo) return;
     let cancelled = false;
@@ -91,9 +166,7 @@ export default function StagingPanel() {
         setSubject(first ?? "");
         setBody(rest.join("\n").trim());
       })
-      .catch(() => {
-        // No commits yet, or HEAD unreadable — leave the box as the user left it.
-      });
+      .catch(() => {});
 
     return () => {
       cancelled = true;
@@ -129,14 +202,18 @@ export default function StagingPanel() {
 
   return (
     <div className="staging-panel panel">
-      <div className="panel-header">
-        <span className="section-label">Changes</span>
-        {(unstaged.length > 0 || untracked.length > 0) && (
-          <button className="ghost" disabled={busy} onClick={() => run(git.stageAll)}>
-            Stage all
-          </button>
-        )}
-      </div>
+      {selectedCommit ? (
+        <CommitDetailView commit={selectedCommit} onDeselect={() => selectCommit(null)} />
+      ) : (
+        <div className="panel-header">
+          <span className="section-label">Changes</span>
+          {(unstaged.length > 0 || untracked.length > 0) && (
+            <button className="ghost" disabled={busy} onClick={() => run(git.stageAll)}>
+              Stage all
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="staging-scroll">
         {conflicted.length > 0 && (
