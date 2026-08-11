@@ -6,10 +6,10 @@ import CommitContextMenu from "./CommitContextMenu";
 import ExplainCommitModal from "../AiModals/ExplainCommitModal";
 import "./CommitGraph.css";
 
-const ROW_HEIGHT = 34;
-const LANE_WIDTH = 14;
-const LANE_ORIGIN = 12;
-const DOT_RADIUS = 4;
+const ROW_HEIGHT = 36;
+const LANE_WIDTH = 18;
+const LANE_ORIGIN = 14;
+const DOT_RADIUS = 7;
 const BRANCH_COLORS = 8;
 
 /** Hash of the synthesized row representing uncommitted work. */
@@ -17,6 +17,15 @@ export const WIP_ROW_HASH = "__wip__";
 
 const laneX = (lane) => LANE_ORIGIN + lane * LANE_WIDTH;
 const laneColor = (lane) => `var(--branch-${lane % BRANCH_COLORS})`;
+
+function getInitials(name) {
+  if (!name) return "";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 function formatTimestamp(seconds) {
   if (!seconds) return "";
@@ -48,11 +57,12 @@ function matchesFilter(commit, needle) {
  * `mergedFrom` lanes, so this renders topology it is given rather than
  * re-deriving parentage in the browser.
  */
-function RowGraphics({ row, isWip }) {
+function RowGraphics({ row, isWip, authorName }) {
   if (!row) return null;
 
   const x = laneX(row.lane);
   const mid = ROW_HEIGHT / 2;
+  const initials = getInitials(authorName);
 
   const lines = [];
   const incomingLanes = new Set((row.incoming || []).map((slot) => slot.lane));
@@ -75,7 +85,7 @@ function RowGraphics({ row, isWip }) {
           x2={lx}
           y2={continues ? ROW_HEIGHT : mid}
           stroke={laneColor(lane)}
-          strokeWidth="1.5"
+          strokeWidth="2.5"
         />
       );
     } else if (arrives && continues) {
@@ -88,7 +98,7 @@ function RowGraphics({ row, isWip }) {
           x2={lx}
           y2={ROW_HEIGHT}
           stroke={laneColor(lane)}
-          strokeWidth="1.5"
+          strokeWidth="2.5"
         />
       );
     } else if (continues) {
@@ -100,7 +110,7 @@ function RowGraphics({ row, isWip }) {
           d={`M ${x} ${mid} C ${x} ${ROW_HEIGHT}, ${lx} ${mid}, ${lx} ${ROW_HEIGHT}`}
           fill="none"
           stroke={laneColor(lane)}
-          strokeWidth="1.5"
+          strokeWidth="2.5"
         />
       );
     }
@@ -118,7 +128,7 @@ function RowGraphics({ row, isWip }) {
         d={`M ${from} 0 C ${from} ${mid}, ${x} ${mid}, ${x} ${mid}`}
         fill="none"
         stroke={laneColor(lane)}
-        strokeWidth="1.5"
+        strokeWidth="2.5"
       />
     );
   }
@@ -133,11 +143,27 @@ function RowGraphics({ row, isWip }) {
           r={DOT_RADIUS}
           fill="var(--bg-base)"
           stroke={laneColor(row.lane)}
-          strokeWidth="1.5"
+          strokeWidth="2"
           strokeDasharray="2 2"
         />
       ) : (
-        <circle cx={x} cy={mid} r={DOT_RADIUS} fill={laneColor(row.lane)} />
+        <g>
+          <circle cx={x} cy={mid} r={DOT_RADIUS} fill={laneColor(row.lane)} />
+          {initials && (
+            <text
+              x={x}
+              y={mid + 3}
+              textAnchor="middle"
+              fill="#ffffff"
+              fontSize="8"
+              fontWeight="700"
+              fontFamily="var(--font-sans)"
+              style={{ pointerEvents: "none", userSelect: "none" }}
+            >
+              {initials}
+            </text>
+          )}
+        </g>
       )}
     </>
   );
@@ -299,7 +325,7 @@ export default function CommitGraph({ style }) {
                     height={ROW_HEIGHT}
                     aria-hidden="true"
                   >
-                    <RowGraphics row={row} isWip={isWip} />
+                    <RowGraphics row={row} isWip={isWip} authorName={commit.authorName} />
                   </svg>
 
                   <span className="graph-subject truncate">
