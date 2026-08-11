@@ -212,7 +212,12 @@ function StatusBar() {
   if (!slice) {
     return (
       <footer className="app-statusbar">
-        <span>PenguinGit Ready</span>
+        <div className="statusbar-left">
+          <span>PenguinGit Ready</span>
+        </div>
+        <div className="statusbar-right">
+          <span className="version-tag">v1.1.0</span>
+        </div>
       </footer>
     );
   }
@@ -225,13 +230,24 @@ function StatusBar() {
 
   return (
     <footer className="app-statusbar">
-      <span>{commits.length} commits</span>
-      <span>{changes === 0 ? "working tree clean" : `${changes} changed`}</span>
-      {status?.upstream && (
-        <span>
-          {status.upstream} · ↑{status.ahead} ↓{status.behind}
-        </span>
-      )}
+      <div className="statusbar-left">
+        <span>{commits.length} commits</span>
+        <span className="statusbar-dot">•</span>
+        <span>{changes === 0 ? "working tree clean" : `${changes} changed`}</span>
+        {status?.upstream && (
+          <>
+            <span className="statusbar-dot">•</span>
+            <span>
+              {status.upstream} · ↑{status.ahead} ↓{status.behind}
+            </span>
+          </>
+        )}
+      </div>
+
+      <div className="statusbar-right">
+        <span className="badge badge-purple">PRO</span>
+        <span className="version-tag">v1.1.0</span>
+      </div>
     </footer>
   );
 }

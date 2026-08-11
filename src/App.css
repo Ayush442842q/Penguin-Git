@@ -189,12 +189,30 @@
   height: var(--statusbar-h);
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
   padding: 0 14px;
   font-size: 11px;
   color: var(--text-muted);
   background: var(--bg-surface);
   border-top: 1px solid var(--border-subtle);
+}
+
+.statusbar-left,
+.statusbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statusbar-dot {
+  color: var(--text-dim);
+  font-size: 8px;
+}
+
+.version-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
 }
 
 .app-statusbar.error {
