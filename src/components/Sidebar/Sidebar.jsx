@@ -16,6 +16,7 @@ export default function Sidebar() {
   const busy = useRepoStore((s) => s.busy);
   const run = useRepoStore((s) => s.run);
 
+  const [filterText, setFilterText] = useState("");
   const [showRemotes, setShowRemotes] = useState(false);
   const [showPatchModal, setShowPatchModal] = useState(false);
   const [showCloudPatches, setShowCloudPatches] = useState(false);
@@ -25,9 +26,7 @@ export default function Sidebar() {
   const remotes = slice.remotes || [];
   const status = slice.status;
 
-  const ahead = status?.ahead ?? 0;
-  const behind = status?.behind ?? 0;
-  const hasUpstream = !!status?.upstream;
+  const githubToken = localStorage.getItem("penguingit:github-token");
 
   return (
     <aside className="sidebar panel">
@@ -37,10 +36,33 @@ export default function Sidebar() {
         </span>
       </div>
 
+      <div className="sidebar-filter-bar">
+        <input
+          type="search"
+          className="sidebar-filter-input"
+          placeholder="Filter branches & remotes…"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+        />
+      </div>
+
       <div className="sidebar-scroll">
-        <BranchPanel />
+        <BranchPanel filter={filterText} />
         <StashPanel />
         <SubmodulePanel />
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span className="section-label">Integrations</span>
+          </div>
+          <div className="sidebar-integration-row">
+            <span className="integration-icon">🐙</span>
+            <span className="integration-name">GitHub Token</span>
+            <span className={`badge ${githubToken ? "badge-green" : "badge-orange"}`}>
+              {githubToken ? "Connected" : "Not Set"}
+            </span>
+          </div>
+        </div>
 
         <div className="sidebar-section">
           <button className="ghost sidebar-section-toggle" onClick={() => setShowPatchModal(true)}>

@@ -128,7 +128,7 @@ function BranchRow({ branch, busy, run, onExplainBranch, onGeneratePr }) {
   );
 }
 
-export default function BranchPanel() {
+export default function BranchPanel({ filter = "" }) {
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const branches = useRepoStore((s) => s.repos[activeRepoId]?.branches || []);
   const busy = useRepoStore((s) => s.busy);
@@ -139,8 +139,16 @@ export default function BranchPanel() {
   const [explainBranch, setExplainBranch] = useState(null);
   const [prBranch, setPrBranch] = useState(null);
 
-  const local = branches.filter((b) => !b.isRemote);
-  const remote = branches.filter((b) => b.isRemote);
+  const query = filter.trim().toLowerCase();
+  const allLocal = branches.filter((b) => !b.isRemote);
+  const allRemote = branches.filter((b) => b.isRemote);
+
+  const local = query
+    ? allLocal.filter((b) => b.name.toLowerCase().includes(query))
+    : allLocal;
+  const remote = query
+    ? allRemote.filter((b) => b.name.toLowerCase().includes(query))
+    : allRemote;
 
   const submitCreate = async (event) => {
     event.preventDefault();
@@ -156,7 +164,9 @@ export default function BranchPanel() {
   return (
     <div className="sidebar-section">
       <div className="sidebar-section-header">
-        <span className="section-label">Branches ({local.length})</span>
+        <span className="section-label">
+          LOCAL ({local.length}/{allLocal.length})
+        </span>
         <button className="ghost" disabled={busy} onClick={() => setCreating((open) => !open)}>
           +
         </button>
@@ -187,10 +197,12 @@ export default function BranchPanel() {
         ))}
       </ul>
 
-      {remote.length > 0 && (
+      {allRemote.length > 0 && (
         <>
           <div className="sidebar-section-header">
-            <span className="section-label">Remote branches ({remote.length})</span>
+            <span className="section-label">
+              REMOTE ({remote.length}/{allRemote.length})
+            </span>
           </div>
           <ul className="sidebar-list">
             {remote.map((branch) => (

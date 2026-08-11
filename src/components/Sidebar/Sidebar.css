@@ -4,6 +4,38 @@
   overflow: hidden;
 }
 
+.sidebar-filter-bar {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.sidebar-filter-input {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+}
+
+.sidebar-integration-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.integration-icon {
+  font-size: 14px;
+}
+
+.integration-name {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
 .sidebar-scroll {
   flex: 1;
   overflow-y: auto;

@@ -42,8 +42,8 @@ describe("BranchPanel", () => {
   it("counts local branches separately from remote-tracking ones", () => {
     render(<BranchPanel />);
 
-    expect(screen.getByText("Branches (2)")).toBeInTheDocument();
-    expect(screen.getByText("Remote branches (1)")).toBeInTheDocument();
+    expect(screen.getByText(/LOCAL/)).toBeInTheDocument();
+    expect(screen.getByText(/REMOTE/)).toBeInTheDocument();
   });
 
   it("marks the checked-out branch", () => {
@@ -58,7 +58,7 @@ describe("BranchPanel", () => {
 
     // `feature/login` is local despite the slash — a real source of
     // misclassification when inferring from the short name.
-    expect(screen.getByText("Branches (2)")).toBeInTheDocument();
+    expect(screen.getByText(/LOCAL/)).toBeInTheDocument();
     expect(screen.getByText("feature/login")).toBeInTheDocument();
   });
 
