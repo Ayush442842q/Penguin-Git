@@ -56,10 +56,14 @@ function CommitDetailView({ commit, onDeselect }) {
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState("path"); // path or tree
 
-  const handleCopyHash = () => {
-    navigator.clipboard.writeText(commit.hash);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const handleCopyHash = async () => {
+    try {
+      await navigator.clipboard.writeText(commit.hash);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      // Clipboard write failed (e.g. permission denied)
+    }
   };
 
   const initials = getInitials(commit.authorName);

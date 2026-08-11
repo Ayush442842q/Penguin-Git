@@ -154,7 +154,7 @@ function RowGraphics({ row, isWip, authorName }) {
               x={x}
               y={mid + 3}
               textAnchor="middle"
-              fill="#ffffff"
+              fill={`var(--branch-text-${row.lane % BRANCH_COLORS})`}
               fontSize="8"
               fontWeight="700"
               fontFamily="var(--font-sans)"

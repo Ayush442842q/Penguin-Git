@@ -20,7 +20,20 @@ export default function Sidebar() {
   const repo = slice.repo;
   const remotes = slice.remotes || [];
 
+  const query = filterText.trim().toLowerCase();
+  const filteredRemotes = query
+    ? remotes.filter(
+        (r) =>
+          r.name.toLowerCase().includes(query) ||
+          (r.fetchUrl && r.fetchUrl.toLowerCase().includes(query))
+      )
+    : remotes;
+
   const githubToken = localStorage.getItem("penguingit:github-token");
+
+  const remotesLabel = query
+    ? `Remotes (${filteredRemotes.length}/${remotes.length})`
+    : `Remotes (${remotes.length})`;
 
   return (
     <aside className="sidebar panel">
@@ -75,13 +88,17 @@ export default function Sidebar() {
             className="ghost sidebar-section-toggle"
             onClick={() => setShowRemotes((open) => !open)}
           >
-            <span className="section-label">Remotes ({remotes.length})</span>
+            <span className="section-label">{remotesLabel}</span>
             <span className="text-dim">{showRemotes ? "−" : "+"}</span>
           </button>
           {showRemotes && (
             <ul className="sidebar-list">
-              {remotes.length === 0 && <li className="sidebar-empty text-muted">No remotes.</li>}
-              {remotes.map((remote) => (
+              {filteredRemotes.length === 0 && (
+                <li className="sidebar-empty text-muted">
+                  {remotes.length === 0 ? "No remotes." : "No matching remotes."}
+                </li>
+              )}
+              {filteredRemotes.map((remote) => (
                 <li key={remote.name} className="sidebar-row">
                   <span className="truncate">{remote.name}</span>
                   <span className="truncate text-dim" title={remote.fetchUrl}>

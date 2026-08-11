@@ -21,8 +21,8 @@
   /* Text */
   --text-primary: #eef0f7;
   --text-secondary: #9ba3b8;
-  --text-muted: #6b7792;
-  --text-dim: #444f68;
+  --text-muted: #8e9ab8;
+  --text-dim: #546280;
 
   /* Brand gradient */
   --brand-from: #7c3aed;
@@ -47,15 +47,23 @@
   --orange-dim: rgba(245, 158, 11, 0.15);
   --red-dim: rgba(239, 68, 68, 0.15);
 
-  /* Graph branch color palette */
+  /* Graph branch color palette & contrast-aware text colors */
   --branch-0: #38bdf8;
+  --branch-text-0: #090d16;
   --branch-1: #a855f7;
+  --branch-text-1: #ffffff;
   --branch-2: #ec4899;
+  --branch-text-2: #ffffff;
   --branch-3: #f59e0b;
+  --branch-text-3: #090d16;
   --branch-4: #10b981;
+  --branch-text-4: #090d16;
   --branch-5: #3b82f6;
+  --branch-text-5: #ffffff;
   --branch-6: #06b6d4;
+  --branch-text-6: #090d16;
   --branch-7: #f43f5e;
+  --branch-text-7: #ffffff;
 
   /* Layout dimensions */
   --header-h: 46px;
