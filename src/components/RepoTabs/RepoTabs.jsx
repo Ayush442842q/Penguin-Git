@@ -57,6 +57,7 @@ export function RepoTabs() {
               onClick={() => handleSelectTab(id)}
               title={repo.path}
             >
+              <span className="repo-tab-icon">📁</span>
               <span className="repo-tab-name">{repo.name}</span>
               <button
                 className="repo-tab-close"
