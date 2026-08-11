@@ -11,8 +11,7 @@ vi.mock("../../services/tauriBridge", async () => {
   return makeBridgeMock();
 });
 
-import * as bridge from "../../services/tauriBridge";
-import { setStore, CLEAN_STATUS } from "../../test/helpers";
+import { setStore } from "../../test/helpers";
 import Sidebar from "./Sidebar";
 import { useRepoStore } from "../../store/repoStore";
 
@@ -42,8 +41,6 @@ describe("Sidebar", () => {
     render(<Sidebar />);
     expect(screen.getByTitle("/repo")).toHaveTextContent("repo");
   });
-
-
 
   describe("remotes list", () => {
     it("stays collapsed until asked for", () => {

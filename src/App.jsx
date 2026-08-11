@@ -59,19 +59,11 @@ function Header({ panels }) {
 
         {repo && (
           <div className="toolbar-actions">
-            <button
-              className="toolbar-btn"
-              onClick={triggerUndo}
-              title="Undo (Ctrl+Z)"
-            >
+            <button className="toolbar-btn" onClick={triggerUndo} title="Undo (Ctrl+Z)">
               <span className="toolbar-icon">↺</span>
               <span className="toolbar-label">Undo</span>
             </button>
-            <button
-              className="toolbar-btn"
-              onClick={triggerRedo}
-              title="Redo (Ctrl+Shift+Z)"
-            >
+            <button className="toolbar-btn" onClick={triggerRedo} title="Redo (Ctrl+Shift+Z)">
               <span className="toolbar-icon">↻</span>
               <span className="toolbar-label">Redo</span>
             </button>

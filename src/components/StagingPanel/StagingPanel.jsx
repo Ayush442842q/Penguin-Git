@@ -63,9 +63,7 @@ function CommitDetailView({ commit, onDeselect }) {
   };
 
   const initials = getInitials(commit.authorName);
-  const formattedDate = commit.timestamp
-    ? new Date(commit.timestamp * 1000).toLocaleString()
-    : "";
+  const formattedDate = commit.timestamp ? new Date(commit.timestamp * 1000).toLocaleString() : "";
 
   return (
     <div className="commit-detail-header-card">

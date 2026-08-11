@@ -143,12 +143,8 @@ export default function BranchPanel({ filter = "" }) {
   const allLocal = branches.filter((b) => !b.isRemote);
   const allRemote = branches.filter((b) => b.isRemote);
 
-  const local = query
-    ? allLocal.filter((b) => b.name.toLowerCase().includes(query))
-    : allLocal;
-  const remote = query
-    ? allRemote.filter((b) => b.name.toLowerCase().includes(query))
-    : allRemote;
+  const local = query ? allLocal.filter((b) => b.name.toLowerCase().includes(query)) : allLocal;
+  const remote = query ? allRemote.filter((b) => b.name.toLowerCase().includes(query)) : allRemote;
 
   const submitCreate = async (event) => {
     event.preventDefault();

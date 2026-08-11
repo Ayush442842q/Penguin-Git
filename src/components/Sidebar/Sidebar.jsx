@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { useRepoStore } from "../../store/repoStore";
-import * as git from "../../services/tauriBridge";
 import BranchPanel from "./BranchPanel";
 import StashPanel from "./StashPanel";
-import "./Sidebar.css";
-
 import SubmodulePanel from "../SubmodulePanel/SubmodulePanel";
 import PatchPanel from "../PatchPanel/PatchPanel";
 import CloudPatches from "../CloudPatches/CloudPatches";
@@ -13,8 +10,6 @@ import "./Sidebar.css";
 export default function Sidebar() {
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const slice = useRepoStore((s) => s.repos[activeRepoId]);
-  const busy = useRepoStore((s) => s.busy);
-  const run = useRepoStore((s) => s.run);
 
   const [filterText, setFilterText] = useState("");
   const [showRemotes, setShowRemotes] = useState(false);
@@ -24,7 +19,6 @@ export default function Sidebar() {
   if (!slice || !slice.repo) return null;
   const repo = slice.repo;
   const remotes = slice.remotes || [];
-  const status = slice.status;
 
   const githubToken = localStorage.getItem("penguingit:github-token");
 
