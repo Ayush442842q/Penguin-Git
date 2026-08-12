@@ -218,7 +218,7 @@ function StatusBar() {
           <span>PenguinGit Ready</span>
         </div>
         <div className="statusbar-right">
-          <span className="version-tag">v1.1.0</span>
+          <span className="version-tag">v1.1.1</span>
         </div>
       </footer>
     );
@@ -248,7 +248,7 @@ function StatusBar() {
 
       <div className="statusbar-right">
         <span className="badge badge-purple">PRO</span>
-        <span className="version-tag">v1.1.0</span>
+        <span className="version-tag">v1.1.1</span>
       </div>
     </footer>
   );
