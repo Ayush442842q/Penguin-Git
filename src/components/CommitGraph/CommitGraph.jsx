@@ -285,16 +285,13 @@ export default function CommitGraph({ style }) {
     setBranchWidth(newWidth);
   }, []);
 
-  const handleGraphResize = useCallback(
-    (e) => {
-      const branchColEl = document.querySelector(".col-header.branch-tag-col");
-      if (!branchColEl) return;
-      const rect = branchColEl.getBoundingClientRect();
-      const newWidth = Math.max(60, Math.min(600, e.clientX - rect.right));
-      setUserGraphWidth(newWidth);
-    },
-    []
-  );
+  const handleGraphResize = useCallback((e) => {
+    const branchColEl = document.querySelector(".col-header.branch-tag-col");
+    if (!branchColEl) return;
+    const rect = branchColEl.getBoundingClientRect();
+    const newWidth = Math.max(60, Math.min(600, e.clientX - rect.right));
+    setUserGraphWidth(newWidth);
+  }, []);
 
   const startResizing = useCallback(
     (col, initialEvent) => {
