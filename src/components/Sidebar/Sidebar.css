@@ -122,6 +122,15 @@
   border: none;
 }
 
+.sidebar-section-header.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sidebar-section-header.clickable:hover {
+  background: var(--bg-hover);
+}
+
 .section-label-group {
   display: flex;
   align-items: center;

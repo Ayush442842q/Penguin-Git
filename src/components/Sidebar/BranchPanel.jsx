@@ -139,6 +139,8 @@ export default function BranchPanel({ filter = "" }) {
   const [newName, setNewName] = useState("");
   const [explainBranch, setExplainBranch] = useState(null);
   const [prBranch, setPrBranch] = useState(null);
+  const [localExpanded, setLocalExpanded] = useState(true);
+  const [remoteExpanded, setRemoteExpanded] = useState(true);
 
   const query = filter.trim().toLowerCase();
   const allLocal = branches.filter((b) => !b.isRemote);
@@ -160,8 +162,12 @@ export default function BranchPanel({ filter = "" }) {
 
   return (
     <div className="sidebar-section">
-      <div className="sidebar-section-header">
+      <div
+        className="sidebar-section-header clickable"
+        onClick={() => setLocalExpanded((open) => !open)}
+      >
         <div className="section-label-group">
+          <span className="caret-icon">{localExpanded ? "∨" : "›"}</span>
           <span className="section-icon">💻</span>
           <span className="section-label">
             LOCAL ({local.length}/{allLocal.length})
@@ -170,14 +176,17 @@ export default function BranchPanel({ filter = "" }) {
         <button
           className="ghost icon-btn-boxed"
           disabled={busy}
-          onClick={() => setCreating((open) => !open)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setCreating((open) => !open);
+          }}
           title="Create new branch"
         >
           +
         </button>
       </div>
 
-      {creating && (
+      {localExpanded && creating && (
         <form className="branch-create" onSubmit={submitCreate}>
           <input
             type="text"
@@ -189,41 +198,49 @@ export default function BranchPanel({ filter = "" }) {
         </form>
       )}
 
-      <ul className="sidebar-list">
-        {local.map((branch) => (
-          <BranchRow
-            key={branch.name}
-            branch={branch}
-            busy={busy}
-            run={run}
-            onExplainBranch={(b) => setExplainBranch(b)}
-            onGeneratePr={(b) => setPrBranch(b)}
-          />
-        ))}
-      </ul>
+      {localExpanded && (
+        <ul className="sidebar-list">
+          {local.map((branch) => (
+            <BranchRow
+              key={branch.name}
+              branch={branch}
+              busy={busy}
+              run={run}
+              onExplainBranch={(b) => setExplainBranch(b)}
+              onGeneratePr={(b) => setPrBranch(b)}
+            />
+          ))}
+        </ul>
+      )}
 
       {allRemote.length > 0 && (
         <>
-          <div className="sidebar-section-header">
+          <div
+            className="sidebar-section-header clickable"
+            onClick={() => setRemoteExpanded((open) => !open)}
+          >
             <div className="section-label-group">
+              <span className="caret-icon">{remoteExpanded ? "∨" : "›"}</span>
               <span className="section-icon">☁️</span>
               <span className="section-label">
                 REMOTE ({remote.length}/{allRemote.length})
               </span>
             </div>
           </div>
-          <ul className="sidebar-list">
-            {remote.map((branch) => (
-              <BranchRow
-                key={branch.name}
-                branch={branch}
-                busy={busy}
-                run={run}
-                onExplainBranch={(b) => setExplainBranch(b)}
-                onGeneratePr={(b) => setPrBranch(b)}
-              />
-            ))}
-          </ul>
+          {remoteExpanded && (
+            <ul className="sidebar-list">
+              {remote.map((branch) => (
+                <BranchRow
+                  key={branch.name}
+                  branch={branch}
+                  busy={busy}
+                  run={run}
+                  onExplainBranch={(b) => setExplainBranch(b)}
+                  onGeneratePr={(b) => setPrBranch(b)}
+                />
+              ))}
+            </ul>
+          )}
         </>
       )}
 
