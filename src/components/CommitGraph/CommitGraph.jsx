@@ -254,12 +254,28 @@ export default function CommitGraph({ style }) {
     overscan: 12,
   });
 
-  const [branchWidth, setBranchWidth] = useState(220);
+  const maxLaneUsed = useMemo(() => {
+    let max = layout.laneCount || 0;
+    for (const r of rows) {
+      if (r.row) {
+        if (typeof r.row.lane === "number") max = Math.max(max, r.row.lane);
+        if (r.row.incoming) {
+          for (const slot of r.row.incoming) max = Math.max(max, slot.lane);
+        }
+        if (r.row.outgoing) {
+          for (const slot of r.row.outgoing) max = Math.max(max, slot.lane);
+        }
+      }
+    }
+    return max;
+  }, [rows, layout.laneCount]);
+
+  const [branchWidth, setBranchWidth] = useState(260);
   const [userGraphWidth, setUserGraphWidth] = useState(null);
   const [resizingCol, setResizingCol] = useState(null);
 
-  const autoGraphWidth = LANE_ORIGIN * 2 + Math.max(layout.laneCount || 1, 1) * LANE_WIDTH + 16;
-  const graphWidth = userGraphWidth ?? Math.max(autoGraphWidth, 110);
+  const autoGraphWidth = LANE_ORIGIN * 2 + (maxLaneUsed + 1) * LANE_WIDTH + 24;
+  const graphWidth = userGraphWidth ?? Math.max(autoGraphWidth, 140);
 
   const handleBranchResize = useCallback((e) => {
     const headerEl = document.querySelector(".graph-column-headers");

@@ -24,7 +24,7 @@
   display: flex;
   align-items: center;
   gap: 0;
-  padding: 6px 14px;
+  padding: 6px 12px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
   font-size: 10px;
@@ -34,6 +34,7 @@
   text-transform: uppercase;
   user-select: none;
   position: relative;
+  box-sizing: border-box;
 }
 
 .col-header {
@@ -43,6 +44,8 @@
 
 .col-header.branch-tag-col {
   flex-shrink: 0;
+  text-align: right;
+  padding-right: 12px;
 }
 
 .col-header.graph-col {
@@ -52,6 +55,7 @@
 .col-header.message-col {
   flex: 1;
   min-width: 0;
+  padding-left: 14px;
 }
 
 .col-resizer {
@@ -94,10 +98,11 @@
   display: flex;
   align-items: center;
   gap: 0;
-  padding-right: 14px;
+  padding: 0 12px;
   cursor: pointer;
   border-bottom: 1px solid var(--border-subtle);
   transition: background var(--ease-fast);
+  box-sizing: border-box;
 }
 
 .graph-row:hover {
@@ -114,10 +119,11 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-right: 12px;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .graph-col-cell {
@@ -125,6 +131,7 @@
   display: flex;
   align-items: center;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .message-col-cell {
@@ -133,7 +140,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-left: 8px;
+  padding-left: 14px;
+  box-sizing: border-box;
 }
 
 .graph-row.wip .graph-subject {
