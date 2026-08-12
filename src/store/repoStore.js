@@ -226,6 +226,7 @@ export const useRepoStore = create((set, get) => ({
   dismissUndoToast: () => set({ undoToast: null }),
 
   triggerUndo: async () => {
+    if (get().busy) return false;
     const activeSlice = get().getActiveSlice();
     if (!activeSlice || !activeSlice.repo) return false;
     try {
@@ -240,6 +241,7 @@ export const useRepoStore = create((set, get) => ({
   },
 
   triggerRedo: async () => {
+    if (get().busy) return false;
     const activeSlice = get().getActiveSlice();
     if (!activeSlice || !activeSlice.repo) return false;
     try {

@@ -15,20 +15,28 @@ import { UndoToast } from "./components/UndoToast/UndoToast";
 import Settings from "./components/Settings/Settings";
 import McpPanel from "./components/McpPanel/McpPanel";
 import Launchpad from "./components/Launchpad/Launchpad";
+import * as git from "./services/tauriBridge";
 import "./App.css";
 
 function Header({ panels }) {
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const slice = useRepoStore((s) => s.repos[activeRepoId]);
   const busy = useRepoStore((s) => s.busy);
+  const run = useRepoStore((s) => s.run);
   const openRepoViaPicker = useRepoStore((s) => s.openRepoViaPicker);
   const closeRepo = useRepoStore((s) => s.closeRepo);
+  const triggerUndo = useRepoStore((s) => s.triggerUndo);
+  const triggerRedo = useRepoStore((s) => s.triggerRedo);
+
   const [showMcp, setShowMcp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showLaunchpad, setShowLaunchpad] = useState(false);
 
   const status = slice?.status;
   const repo = slice?.repo;
+  const ahead = status?.ahead ?? 0;
+  const behind = status?.behind ?? 0;
+  const hasUpstream = !!status?.upstream;
 
   return (
     <>
@@ -48,6 +56,91 @@ function Header({ panels }) {
         </div>
 
         <RepoTabs />
+
+        {repo && (
+          <div className="toolbar-actions">
+            <button
+              className="toolbar-btn"
+              disabled={busy}
+              onClick={triggerUndo}
+              title="Undo (Ctrl+Z)"
+            >
+              <span className="toolbar-icon">↺</span>
+              <span className="toolbar-label">Undo</span>
+            </button>
+            <button
+              className="toolbar-btn"
+              disabled={busy}
+              onClick={triggerRedo}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <span className="toolbar-icon">↻</span>
+              <span className="toolbar-label">Redo</span>
+            </button>
+
+            <span className="toolbar-divider" />
+
+            <button
+              className="toolbar-btn"
+              disabled={busy}
+              onClick={() => run((path) => git.fetch(path, null))}
+              title="Fetch remote changes"
+            >
+              <span className="toolbar-icon">⇊</span>
+              <span className="toolbar-label">Fetch</span>
+            </button>
+            <button
+              className="toolbar-btn"
+              disabled={busy}
+              onClick={() => run(git.pull)}
+              title="Pull changes from upstream"
+            >
+              <span className="toolbar-icon">↓</span>
+              <span className="toolbar-label">Pull</span>
+              {behind > 0 && <span className="badge badge-blue">{behind}</span>}
+            </button>
+            <button
+              className="toolbar-btn"
+              disabled={busy}
+              title={hasUpstream ? "Push to upstream" : "Push and set upstream"}
+              onClick={() =>
+                run((path) =>
+                  git.push(
+                    path,
+                    hasUpstream ? null : "origin",
+                    hasUpstream ? null : status?.branch,
+                    !hasUpstream
+                  )
+                )
+              }
+            >
+              <span className="toolbar-icon">↑</span>
+              <span className="toolbar-label">Push</span>
+              {ahead > 0 && <span className="badge badge-green">{ahead}</span>}
+            </button>
+
+            <span className="toolbar-divider" />
+
+            <button
+              className="toolbar-btn"
+              disabled={busy}
+              onClick={() => run((path) => git.stashSave(path, null, false))}
+              title="Stash working changes"
+            >
+              <span className="toolbar-icon">📦</span>
+              <span className="toolbar-label">Stash</span>
+            </button>
+            <button
+              className="toolbar-btn"
+              disabled={busy}
+              onClick={() => run((path) => git.stashPop(path, 0))}
+              title="Pop latest stash"
+            >
+              <span className="toolbar-icon">📤</span>
+              <span className="toolbar-label">Pop</span>
+            </button>
+          </div>
+        )}
 
         <div className="app-header-right">
           {panels && (
@@ -121,7 +214,12 @@ function StatusBar() {
   if (!slice) {
     return (
       <footer className="app-statusbar">
-        <span>PenguinGit Ready</span>
+        <div className="statusbar-left">
+          <span>PenguinGit Ready</span>
+        </div>
+        <div className="statusbar-right">
+          <span className="version-tag">v1.1.0</span>
+        </div>
       </footer>
     );
   }
@@ -134,13 +232,24 @@ function StatusBar() {
 
   return (
     <footer className="app-statusbar">
-      <span>{commits.length} commits</span>
-      <span>{changes === 0 ? "working tree clean" : `${changes} changed`}</span>
-      {status?.upstream && (
-        <span>
-          {status.upstream} · ↑{status.ahead} ↓{status.behind}
-        </span>
-      )}
+      <div className="statusbar-left">
+        <span>{commits.length} commits</span>
+        <span className="statusbar-dot">•</span>
+        <span>{changes === 0 ? "working tree clean" : `${changes} changed`}</span>
+        {status?.upstream && (
+          <>
+            <span className="statusbar-dot">•</span>
+            <span>
+              {status.upstream} · ↑{status.ahead} ↓{status.behind}
+            </span>
+          </>
+        )}
+      </div>
+
+      <div className="statusbar-right">
+        <span className="badge badge-purple">PRO</span>
+        <span className="version-tag">v1.1.0</span>
+      </div>
     </footer>
   );
 }

@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { useRepoStore } from "../../store/repoStore";
-import * as git from "../../services/tauriBridge";
 import BranchPanel from "./BranchPanel";
 import StashPanel from "./StashPanel";
-import "./Sidebar.css";
-
 import SubmodulePanel from "../SubmodulePanel/SubmodulePanel";
 import PatchPanel from "../PatchPanel/PatchPanel";
 import CloudPatches from "../CloudPatches/CloudPatches";
@@ -13,9 +10,8 @@ import "./Sidebar.css";
 export default function Sidebar() {
   const activeRepoId = useRepoStore((s) => s.activeRepoId);
   const slice = useRepoStore((s) => s.repos[activeRepoId]);
-  const busy = useRepoStore((s) => s.busy);
-  const run = useRepoStore((s) => s.run);
 
+  const [filterText, setFilterText] = useState("");
   const [showRemotes, setShowRemotes] = useState(false);
   const [showPatchModal, setShowPatchModal] = useState(false);
   const [showCloudPatches, setShowCloudPatches] = useState(false);
@@ -23,11 +19,21 @@ export default function Sidebar() {
   if (!slice || !slice.repo) return null;
   const repo = slice.repo;
   const remotes = slice.remotes || [];
-  const status = slice.status;
 
-  const ahead = status?.ahead ?? 0;
-  const behind = status?.behind ?? 0;
-  const hasUpstream = !!status?.upstream;
+  const query = filterText.trim().toLowerCase();
+  const filteredRemotes = query
+    ? remotes.filter(
+        (r) =>
+          r.name.toLowerCase().includes(query) ||
+          (r.fetchUrl && r.fetchUrl.toLowerCase().includes(query))
+      )
+    : remotes;
+
+  const githubToken = localStorage.getItem("penguingit:github-token");
+
+  const remotesLabel = query
+    ? `Remotes (${filteredRemotes.length}/${remotes.length})`
+    : `Remotes (${remotes.length})`;
 
   return (
     <aside className="sidebar panel">
@@ -37,35 +43,33 @@ export default function Sidebar() {
         </span>
       </div>
 
-      <div className="sidebar-scroll">
-        <div className="remote-actions">
-          <button disabled={busy} onClick={() => run((path) => git.fetch(path, null))}>
-            Fetch
-          </button>
-          <button disabled={busy} onClick={() => run(git.pull)}>
-            Pull {behind > 0 && <span className="badge badge-blue">{behind}</span>}
-          </button>
-          <button
-            disabled={busy}
-            title={hasUpstream ? "Push to upstream" : "Push and set upstream"}
-            onClick={() =>
-              run((path) =>
-                git.push(
-                  path,
-                  hasUpstream ? null : "origin",
-                  hasUpstream ? null : status?.branch,
-                  !hasUpstream
-                )
-              )
-            }
-          >
-            Push {ahead > 0 && <span className="badge badge-green">{ahead}</span>}
-          </button>
-        </div>
+      <div className="sidebar-filter-bar">
+        <input
+          type="search"
+          className="sidebar-filter-input"
+          placeholder="Filter branches & remotes…"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+        />
+      </div>
 
-        <BranchPanel />
+      <div className="sidebar-scroll">
+        <BranchPanel filter={filterText} />
         <StashPanel />
         <SubmodulePanel />
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span className="section-label">Integrations</span>
+          </div>
+          <div className="sidebar-integration-row">
+            <span className="integration-icon">🐙</span>
+            <span className="integration-name">GitHub Token</span>
+            <span className={`badge ${githubToken ? "badge-green" : "badge-orange"}`}>
+              {githubToken ? "Connected" : "Not Set"}
+            </span>
+          </div>
+        </div>
 
         <div className="sidebar-section">
           <button className="ghost sidebar-section-toggle" onClick={() => setShowPatchModal(true)}>
@@ -84,13 +88,17 @@ export default function Sidebar() {
             className="ghost sidebar-section-toggle"
             onClick={() => setShowRemotes((open) => !open)}
           >
-            <span className="section-label">Remotes ({remotes.length})</span>
+            <span className="section-label">{remotesLabel}</span>
             <span className="text-dim">{showRemotes ? "−" : "+"}</span>
           </button>
           {showRemotes && (
             <ul className="sidebar-list">
-              {remotes.length === 0 && <li className="sidebar-empty text-muted">No remotes.</li>}
-              {remotes.map((remote) => (
+              {filteredRemotes.length === 0 && (
+                <li className="sidebar-empty text-muted">
+                  {remotes.length === 0 ? "No remotes." : "No matching remotes."}
+                </li>
+              )}
+              {filteredRemotes.map((remote) => (
                 <li key={remote.name} className="sidebar-row">
                   <span className="truncate">{remote.name}</span>
                   <span className="truncate text-dim" title={remote.fetchUrl}>

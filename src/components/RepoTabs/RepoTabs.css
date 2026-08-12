@@ -1,10 +1,9 @@
 .repo-tabs-container {
   display: flex;
   align-items: center;
-  background-color: var(--tab-bg, #18181b);
-  border-bottom: 1px solid var(--border-color, #27272a);
-  height: 36px;
-  padding: 0 0.5rem;
+  background-color: transparent;
+  height: 32px;
+  padding: 0 4px;
   overflow: hidden;
   user-select: none;
 }
@@ -12,7 +11,7 @@
 .repo-tabs-scroll {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -24,30 +23,34 @@
 .repo-tab-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  height: 28px;
-  border-radius: 4px 4px 0 0;
-  font-size: 0.85rem;
-  color: var(--text-dim, #999);
+  gap: 5px;
+  padding: 3px 10px;
+  height: 26px;
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  color: var(--text-muted);
   background-color: transparent;
+  border: 1px solid transparent;
   cursor: pointer;
   white-space: nowrap;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+  transition: all var(--ease-fast);
 }
 
 .repo-tab-item:hover {
-  background-color: var(--tab-hover-bg, #27272a);
-  color: var(--text-color, #fff);
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .repo-tab-item.active {
-  background-color: var(--tab-active-bg, #27272a);
-  color: var(--accent-color, #a855f7);
+  background-color: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
   font-weight: 600;
-  border-bottom: 2px solid var(--accent-color, #a855f7);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.repo-tab-icon {
+  font-size: 11px;
 }
 
 .repo-tab-name {
@@ -61,33 +64,33 @@
   background: none;
   border: none;
   color: inherit;
-  font-size: 0.9rem;
+  font-size: 11px;
   cursor: pointer;
-  padding: 0 2px;
+  padding: 0 3px;
   border-radius: 2px;
   line-height: 1;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .repo-tab-close:hover {
   opacity: 1;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #ff5555;
+  background-color: var(--red-dim);
+  color: var(--accent-red);
 }
 
 .repo-tabs-add {
   background: none;
   border: none;
-  color: var(--text-dim, #999);
-  font-size: 1.1rem;
+  color: var(--text-muted);
+  font-size: 13px;
   font-weight: bold;
-  padding: 2px 8px;
+  padding: 2px 6px;
   cursor: pointer;
-  border-radius: 4px;
-  margin-left: 4px;
+  border-radius: var(--r-sm);
+  margin-left: 2px;
 }
 
 .repo-tabs-add:hover {
-  background-color: var(--tab-hover-bg, #27272a);
-  color: var(--text-color, #fff);
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }

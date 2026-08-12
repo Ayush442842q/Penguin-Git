@@ -85,11 +85,11 @@ describe("CommitGraph", () => {
     const { container } = render(<CommitGraph />);
     const rows = container.querySelectorAll(".graph-row");
 
-    // Lane 0 sits at x=12, lane 1 at x=26 (LANE_ORIGIN + lane * LANE_WIDTH).
+    // Lane 0 sits at x=14, lane 1 at x=32 (LANE_ORIGIN + lane * LANE_WIDTH).
     const dotX = (index) => rows[index].querySelector("circle")?.getAttribute("cx");
-    expect(dotX(0)).toBe("12"); // merge, lane 0
-    expect(dotX(2)).toBe("26"); // feature, lane 1
-    expect(dotX(3)).toBe("12"); // base, back on lane 0
+    expect(dotX(0)).toBe("14"); // merge, lane 0
+    expect(dotX(2)).toBe("32"); // feature, lane 1
+    expect(dotX(3)).toBe("14"); // base, back on lane 0
   });
 
   it("draws a converging curve where a side branch is merged in", () => {
@@ -109,7 +109,7 @@ describe("CommitGraph", () => {
     // show the branch arriving from nowhere above the merge commit.
     const path = mergeRow.querySelector("path");
     expect(path).not.toBeNull();
-    expect(path.getAttribute("d")).toMatch(/^M 12 17/);
+    expect(path.getAttribute("d")).toMatch(/^M 14 18/);
   });
 
   it("renders ref badges attached to their commit", () => {

@@ -5,24 +5,24 @@
    no network fetch at runtime (required by our CSP: default-src 'self'). */
 
 :root {
-  /* Core palette */
-  --bg-base: #0a0b0d;
-  --bg-surface: #111318;
-  --bg-elevated: #191d26;
-  --bg-hover: #1f2433;
-  --bg-active: #252b3b;
-  --bg-input: #0d0f14;
+  /* Core palette — GitKraken Slate/Navy */
+  --bg-base: #0e1117;
+  --bg-surface: #141820;
+  --bg-elevated: #1c2230;
+  --bg-hover: #232a3a;
+  --bg-active: #2a3347;
+  --bg-input: #0c1018;
 
   /* Borders */
-  --border-subtle: #1e2230;
-  --border-muted: #252c3b;
-  --border-strong: #353f57;
+  --border-subtle: #1a2035;
+  --border-muted: #253040;
+  --border-strong: #354560;
 
   /* Text */
   --text-primary: #eef0f7;
   --text-secondary: #9ba3b8;
-  --text-muted: #5e6880;
-  --text-dim: #3d4559;
+  --text-muted: #8e9ab8;
+  --text-dim: #546280;
 
   /* Brand gradient */
   --brand-from: #7c3aed;
@@ -40,28 +40,36 @@
   --accent-teal: #14b8a6;
 
   /* Dim/alpha versions */
-  --purple-dim: rgba(139, 92, 246, 0.12);
-  --blue-dim: rgba(59, 130, 246, 0.12);
-  --cyan-dim: rgba(6, 182, 212, 0.12);
-  --green-dim: rgba(16, 185, 129, 0.12);
-  --orange-dim: rgba(245, 158, 11, 0.12);
-  --red-dim: rgba(239, 68, 68, 0.12);
+  --purple-dim: rgba(139, 92, 246, 0.15);
+  --blue-dim: rgba(59, 130, 246, 0.15);
+  --cyan-dim: rgba(6, 182, 212, 0.15);
+  --green-dim: rgba(16, 185, 129, 0.15);
+  --orange-dim: rgba(245, 158, 11, 0.15);
+  --red-dim: rgba(239, 68, 68, 0.15);
 
-  /* Graph branch color palette */
-  --branch-0: #8b5cf6;
-  --branch-1: #06b6d4;
-  --branch-2: #10b981;
+  /* Graph branch color palette & contrast-aware text colors */
+  --branch-0: #38bdf8;
+  --branch-text-0: #090d16;
+  --branch-1: #a855f7;
+  --branch-text-1: #ffffff;
+  --branch-2: #ec4899;
+  --branch-text-2: #ffffff;
   --branch-3: #f59e0b;
-  --branch-4: #ec4899;
+  --branch-text-3: #090d16;
+  --branch-4: #10b981;
+  --branch-text-4: #090d16;
   --branch-5: #3b82f6;
-  --branch-6: #14b8a6;
-  --branch-7: #a855f7;
+  --branch-text-5: #ffffff;
+  --branch-6: #06b6d4;
+  --branch-text-6: #090d16;
+  --branch-7: #f43f5e;
+  --branch-text-7: #ffffff;
 
   /* Layout dimensions */
-  --header-h: 44px;
+  --header-h: 46px;
   --sidebar-w: 260px;
   --detail-w: 340px;
-  --statusbar-h: 24px;
+  --statusbar-h: 26px;
 
   /* Typography */
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
