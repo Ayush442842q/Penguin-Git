@@ -124,9 +124,7 @@ export default function Sidebar() {
                         </li>
                         <li className="tree-item-row">
                           <span className="pr-status-icon open">○</span>
-                          <span className="truncate pr-title">
-                            #770 update readme and boards
-                          </span>
+                          <span className="truncate pr-title">#770 update readme and boards</span>
                         </li>
                         <li className="tree-item-row">
                           <span className="pr-status-icon open">○</span>
@@ -173,58 +171,103 @@ export default function Sidebar() {
 
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span className="section-label">GITHUB ISSUES</span>
+            <div className="section-label-group">
+              <span className="section-icon">🐙</span>
+              <span className="section-label">GITHUB ISSUES</span>
+            </div>
           </div>
-          <div className="sidebar-select-wrapper">
+          <div className="sidebar-select-wrapper inline-control">
+            <span className="select-inline-label">Repo:</span>
             <select className="sidebar-select">
-              <option value="">Select repository…</option>
+              <option value="">Select…</option>
               <option value={repo.name}>{repo.name}</option>
             </select>
+            <span className="sub-filter-icon" title="Filter issues">
+              ⚙
+            </span>
           </div>
         </div>
 
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span className="section-label">TEAMS</span>
+            <div className="section-label-group">
+              <span className="section-icon">👥</span>
+              <span className="section-label">TEAMS</span>
+            </div>
           </div>
-          <div className="sidebar-select-wrapper">
+          <div className="sidebar-select-wrapper inline-control">
+            <span className="select-inline-label">Team:</span>
             <select className="sidebar-select">
               <option value="Docs Team">Docs Team</option>
             </select>
           </div>
-          <ul className="sidebar-list">
-            <li className="sidebar-row user-row">
-              <span className="user-avatar-initials">AL</span>
-              <span className="truncate">Alex L</span>
+          <ul className="sidebar-list user-team-list">
+            <li className="sidebar-user-block">
+              <div className="user-main-row">
+                <span className="user-avatar-initials green">AL</span>
+                <span className="user-name">Alex L</span>
+                <span className="user-handle">@AlexLatham</span>
+              </div>
+              <div className="user-sub-branch">
+                <span className="branch-icon">⎇</span>
+                <span className="truncate branch-name">support.gitkraken.com updates</span>
+              </div>
             </li>
-            <li className="sidebar-row user-row">
-              <span className="user-avatar-initials">DL</span>
-              <span className="truncate">Diane Lo</span>
+            <li className="sidebar-user-block">
+              <div className="user-main-row">
+                <span className="user-avatar-initials blue">DL</span>
+                <span className="user-name">Diane Lo</span>
+                <span className="user-handle">@diane</span>
+              </div>
             </li>
-            <li className="sidebar-row user-row">
-              <span className="user-avatar-initials">DM</span>
-              <span className="truncate">Dwayne McDaniel</span>
+            <li className="sidebar-user-block">
+              <div className="user-main-row">
+                <span className="user-avatar-initials orange">DM</span>
+                <span className="user-name">Dwayne McDaniel</span>
+                <span className="user-handle">@dwaynemc</span>
+              </div>
             </li>
           </ul>
         </div>
 
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span className="section-label">TAGS (1/1)</span>
-            <button className="ghost" title="Create Tag">
-              +
-            </button>
+            <div className="section-label-group">
+              <span className="section-icon">🏷️</span>
+              <span className="section-label">TAGS</span>
+            </div>
+            <div className="section-header-actions">
+              <span className="badge badge-blue-text">1/1</span>
+              <button className="ghost icon-btn-boxed" title="Create Tag">
+                +
+              </button>
+            </div>
           </div>
           <ul className="sidebar-list">
             <li className="sidebar-row">
-              <span className="truncate">🏷️ v1.1.1</span>
+              <span className="branch-icon">🏷️</span>
+              <span className="truncate">v1.1.1</span>
             </li>
           </ul>
         </div>
 
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span className="section-label">GITHUB ACTIONS (0)</span>
+            <div className="section-label-group">
+              <span className="section-icon">📦</span>
+              <span className="section-label">SUBMODULES</span>
+            </div>
+            <span className="badge badge-dim">0</span>
+          </div>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <div className="section-label-group">
+              <span className="section-icon">▶️</span>
+              <span className="section-label">GITHUB ACTIONS</span>
+            </div>
+            <span className="badge badge-dim">0</span>
           </div>
         </div>
 
