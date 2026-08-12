@@ -254,7 +254,53 @@ export default function CommitGraph({ style }) {
     overscan: 12,
   });
 
-  const graphWidth = LANE_ORIGIN * 2 + Math.max(layout.laneCount || 1, 1) * LANE_WIDTH;
+  const [branchWidth, setBranchWidth] = useState(220);
+  const [userGraphWidth, setUserGraphWidth] = useState(null);
+  const [resizingCol, setResizingCol] = useState(null);
+
+  const autoGraphWidth = LANE_ORIGIN * 2 + Math.max(layout.laneCount || 1, 1) * LANE_WIDTH + 16;
+  const graphWidth = userGraphWidth ?? Math.max(autoGraphWidth, 110);
+
+  const handleBranchResize = useCallback((e) => {
+    const headerEl = document.querySelector(".graph-column-headers");
+    if (!headerEl) return;
+    const rect = headerEl.getBoundingClientRect();
+    const newWidth = Math.max(80, Math.min(500, e.clientX - rect.left));
+    setBranchWidth(newWidth);
+  }, []);
+
+  const handleGraphResize = useCallback(
+    (e) => {
+      const branchColEl = document.querySelector(".col-header.branch-tag-col");
+      if (!branchColEl) return;
+      const rect = branchColEl.getBoundingClientRect();
+      const newWidth = Math.max(60, Math.min(600, e.clientX - rect.right));
+      setUserGraphWidth(newWidth);
+    },
+    []
+  );
+
+  const startResizing = useCallback(
+    (col, initialEvent) => {
+      initialEvent.preventDefault();
+      setResizingCol(col);
+
+      const onMouseMove = (e) => {
+        if (col === "branch") handleBranchResize(e);
+        if (col === "graph") handleGraphResize(e);
+      };
+
+      const onMouseUp = () => {
+        setResizingCol(null);
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    },
+    [handleBranchResize, handleGraphResize]
+  );
 
   const handleContextMenu = useCallback((event, entry) => {
     event.preventDefault();
@@ -287,8 +333,22 @@ export default function CommitGraph({ style }) {
       </div>
 
       <div className="graph-column-headers">
-        <span className="col-header branch-tag-col">BRANCH / TAG</span>
-        <span className="col-header graph-col">GRAPH</span>
+        <span className="col-header branch-tag-col" style={{ width: `${branchWidth}px` }}>
+          BRANCH / TAG
+        </span>
+        <div
+          className={`col-resizer${resizingCol === "branch" ? " resizing" : ""}`}
+          onMouseDown={(e) => startResizing("branch", e)}
+          title="Drag to resize BRANCH / TAG column"
+        />
+        <span className="col-header graph-col" style={{ width: `${graphWidth}px` }}>
+          GRAPH
+        </span>
+        <div
+          className={`col-resizer${resizingCol === "graph" ? " resizing" : ""}`}
+          onMouseDown={(e) => startResizing("graph", e)}
+          title="Drag to resize GRAPH column"
+        />
         <span className="col-header message-col">COMMIT MESSAGE</span>
       </div>
 
@@ -323,13 +383,16 @@ export default function CommitGraph({ style }) {
                   }}
                   onContextMenu={(event) => handleContextMenu(event, entry)}
                 >
-                  <div className="branch-tag-col-cell truncate">
+                  <div
+                    className="branch-tag-col-cell truncate"
+                    style={{ width: `${branchWidth}px` }}
+                  >
                     {(commit.refs || []).map((ref) => (
                       <RefBadge key={ref} name={ref} />
                     ))}
                   </div>
 
-                  <div className="graph-col-cell">
+                  <div className="graph-col-cell" style={{ width: `${graphWidth}px` }}>
                     <svg
                       className="graph-lanes"
                       width={graphWidth}
