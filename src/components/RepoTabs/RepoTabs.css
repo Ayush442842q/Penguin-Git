@@ -43,10 +43,11 @@
 
 .repo-tab-item.active {
   background-color: var(--bg-elevated);
-  border-color: var(--border-subtle);
+  border-color: var(--border-muted);
   color: var(--text-primary);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  border-top: 2px solid var(--accent-orange);
 }
 
 .repo-tab-icon {

@@ -20,6 +20,71 @@
   width: 100%;
 }
 
+.graph-column-headers {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 6px 12px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  user-select: none;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.col-header {
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+.col-header.branch-tag-col {
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 12px;
+}
+
+.col-header.graph-col {
+  flex-shrink: 0;
+}
+
+.col-header.message-col {
+  flex: 1;
+  min-width: 0;
+  padding-left: 14px;
+}
+
+.col-resizer {
+  width: 10px;
+  height: 100%;
+  margin: 0 -5px;
+  cursor: col-resize;
+  z-index: 10;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.col-resizer::after {
+  content: "";
+  width: 2px;
+  height: 12px;
+  background: var(--border-strong);
+  border-radius: 1px;
+  transition: background 0.15s ease;
+}
+
+.col-resizer:hover::after,
+.col-resizer.resizing::after {
+  background: var(--brand-from);
+  box-shadow: 0 0 6px var(--brand-from);
+}
+
 .graph-empty {
   padding: 24px 16px;
   font-size: 12px;
@@ -32,10 +97,12 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-right: 14px;
+  gap: 0;
+  padding: 0 12px;
   cursor: pointer;
-  border-bottom: 1px solid transparent;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--ease-fast);
+  box-sizing: border-box;
 }
 
 .graph-row:hover {
@@ -44,7 +111,37 @@
 
 .graph-row.selected {
   background: var(--bg-active);
-  border-bottom-color: var(--border-muted);
+  border-bottom-color: var(--border-strong);
+  box-shadow: inset 3px 0 0 var(--accent-orange);
+}
+
+.branch-tag-col-cell {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding-right: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.graph-col-cell {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.message-col-cell {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 14px;
+  box-sizing: border-box;
 }
 
 .graph-row.wip .graph-subject {
@@ -59,9 +156,8 @@
 .graph-subject {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
 }
 
 .graph-author {

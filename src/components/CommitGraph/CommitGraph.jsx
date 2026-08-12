@@ -254,7 +254,66 @@ export default function CommitGraph({ style }) {
     overscan: 12,
   });
 
-  const graphWidth = LANE_ORIGIN * 2 + Math.max(layout.laneCount || 1, 1) * LANE_WIDTH;
+  const maxLaneUsed = useMemo(() => {
+    let max = layout.laneCount || 0;
+    for (const r of rows) {
+      if (r.row) {
+        if (typeof r.row.lane === "number") max = Math.max(max, r.row.lane);
+        if (r.row.incoming) {
+          for (const slot of r.row.incoming) max = Math.max(max, slot.lane);
+        }
+        if (r.row.outgoing) {
+          for (const slot of r.row.outgoing) max = Math.max(max, slot.lane);
+        }
+      }
+    }
+    return max;
+  }, [rows, layout.laneCount]);
+
+  const [branchWidth, setBranchWidth] = useState(260);
+  const [userGraphWidth, setUserGraphWidth] = useState(null);
+  const [resizingCol, setResizingCol] = useState(null);
+
+  const autoGraphWidth = LANE_ORIGIN * 2 + (maxLaneUsed + 1) * LANE_WIDTH + 24;
+  const graphWidth = userGraphWidth ?? Math.max(autoGraphWidth, 140);
+
+  const handleBranchResize = useCallback((e) => {
+    const headerEl = document.querySelector(".graph-column-headers");
+    if (!headerEl) return;
+    const rect = headerEl.getBoundingClientRect();
+    const newWidth = Math.max(80, Math.min(500, e.clientX - rect.left));
+    setBranchWidth(newWidth);
+  }, []);
+
+  const handleGraphResize = useCallback((e) => {
+    const branchColEl = document.querySelector(".col-header.branch-tag-col");
+    if (!branchColEl) return;
+    const rect = branchColEl.getBoundingClientRect();
+    const newWidth = Math.max(60, Math.min(600, e.clientX - rect.right));
+    setUserGraphWidth(newWidth);
+  }, []);
+
+  const startResizing = useCallback(
+    (col, initialEvent) => {
+      initialEvent.preventDefault();
+      setResizingCol(col);
+
+      const onMouseMove = (e) => {
+        if (col === "branch") handleBranchResize(e);
+        if (col === "graph") handleGraphResize(e);
+      };
+
+      const onMouseUp = () => {
+        setResizingCol(null);
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    },
+    [handleBranchResize, handleGraphResize]
+  );
 
   const handleContextMenu = useCallback((event, entry) => {
     event.preventDefault();
@@ -286,6 +345,26 @@ export default function CommitGraph({ style }) {
         />
       </div>
 
+      <div className="graph-column-headers">
+        <span className="col-header branch-tag-col" style={{ width: `${branchWidth}px` }}>
+          BRANCH / TAG
+        </span>
+        <div
+          className={`col-resizer${resizingCol === "branch" ? " resizing" : ""}`}
+          onMouseDown={(e) => startResizing("branch", e)}
+          title="Drag to resize BRANCH / TAG column"
+        />
+        <span className="col-header graph-col" style={{ width: `${graphWidth}px` }}>
+          GRAPH
+        </span>
+        <div
+          className={`col-resizer${resizingCol === "graph" ? " resizing" : ""}`}
+          onMouseDown={(e) => startResizing("graph", e)}
+          title="Drag to resize GRAPH column"
+        />
+        <span className="col-header message-col">COMMIT MESSAGE</span>
+      </div>
+
       <div className="graph-scroll" ref={scrollRef}>
         {rows.length === 0 ? (
           <p className="graph-empty text-muted">
@@ -310,8 +389,6 @@ export default function CommitGraph({ style }) {
                   tabIndex={0}
                   onClick={() => selectCommit(commit.hash)}
                   onKeyDown={(event) => {
-                    // Selecting a commit drives the diff panel, so this is the
-                    // primary workflow — it can't be mouse-only.
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       selectCommit(commit.hash);
@@ -319,24 +396,32 @@ export default function CommitGraph({ style }) {
                   }}
                   onContextMenu={(event) => handleContextMenu(event, entry)}
                 >
-                  <svg
-                    className="graph-lanes"
-                    width={graphWidth}
-                    height={ROW_HEIGHT}
-                    aria-hidden="true"
+                  <div
+                    className="branch-tag-col-cell truncate"
+                    style={{ width: `${branchWidth}px` }}
                   >
-                    <RowGraphics row={row} isWip={isWip} authorName={commit.authorName} />
-                  </svg>
-
-                  <span className="graph-subject truncate">
                     {(commit.refs || []).map((ref) => (
                       <RefBadge key={ref} name={ref} />
                     ))}
-                    {commit.subject}
-                  </span>
-                  <span className="graph-author truncate text-muted">{commit.authorName}</span>
-                  <span className="graph-date text-dim">{formatTimestamp(commit.timestamp)}</span>
-                  <span className="graph-hash mono text-dim">{commit.shortHash}</span>
+                  </div>
+
+                  <div className="graph-col-cell" style={{ width: `${graphWidth}px` }}>
+                    <svg
+                      className="graph-lanes"
+                      width={graphWidth}
+                      height={ROW_HEIGHT}
+                      aria-hidden="true"
+                    >
+                      <RowGraphics row={row} isWip={isWip} authorName={commit.authorName} />
+                    </svg>
+                  </div>
+
+                  <div className="message-col-cell">
+                    <span className="graph-subject truncate">{commit.subject}</span>
+                    <span className="graph-author truncate text-muted">{commit.authorName}</span>
+                    <span className="graph-date text-dim">{formatTimestamp(commit.timestamp)}</span>
+                    <span className="graph-hash mono text-dim">{commit.shortHash}</span>
+                  </div>
                 </div>
               );
             })}

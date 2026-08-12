@@ -15,6 +15,14 @@ export default function Sidebar() {
   const [showRemotes, setShowRemotes] = useState(false);
   const [showPatchModal, setShowPatchModal] = useState(false);
   const [showCloudPatches, setShowCloudPatches] = useState(false);
+  const [expandedPrGroups, setExpandedPrGroups] = useState({
+    myPrs: true,
+    origin: true,
+  });
+
+  const togglePrGroup = (key) => {
+    setExpandedPrGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   if (!slice || !slice.repo) return null;
   const repo = slice.repo;
@@ -37,26 +45,231 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar panel">
-      <div className="panel-header">
-        <span className="section-label truncate" title={repo.path}>
-          {repo.name}
-        </span>
+      <div className="panel-header sidebar-top-header">
+        <div className="sidebar-viewing-bar">
+          <button className="ghost icon-btn sidebar-back-btn" title="Back">
+            ‹
+          </button>
+          <span className="sidebar-viewing-text" title={repo.path}>
+            <span className="sidebar-repo-title">{repo.name}</span> Viewing{" "}
+            <span className="viewing-count">101/101</span>
+          </span>
+        </div>
+        <button className="ghost text-btn sidebar-show-all">Show All</button>
       </div>
 
       <div className="sidebar-filter-bar">
-        <input
-          type="search"
-          className="sidebar-filter-input"
-          placeholder="Filter branches & remotes…"
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-        />
+        <div className="sidebar-filter-wrapper">
+          <input
+            type="search"
+            className="sidebar-filter-input"
+            placeholder="Filter (Ctrl + Alt + f)"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+          />
+          <span className="filter-search-icon">🔍</span>
+        </div>
       </div>
 
       <div className="sidebar-scroll">
         <BranchPanel filter={filterText} />
         <StashPanel />
         <SubmodulePanel />
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <div className="section-label-group">
+              <span className="section-icon">🔀</span>
+              <span className="section-label">PULL REQUESTS</span>
+            </div>
+            <button className="ghost icon-btn-boxed" title="New Pull Request">
+              +
+            </button>
+          </div>
+
+          <div className="sidebar-search-box">
+            <div className="sidebar-filter-wrapper">
+              <span className="sub-search-icon">🔍</span>
+              <input
+                type="search"
+                placeholder="Search pull requests"
+                className="sidebar-sub-input"
+              />
+              <span className="sub-filter-icon" title="Filter options">
+                ⚙
+              </span>
+            </div>
+          </div>
+
+          <ul className="sidebar-list tree-list">
+            <li className="sidebar-tree-node">
+              <div className="tree-node-header" onClick={() => togglePrGroup("myPrs")}>
+                <span className="caret-icon">{expandedPrGroups.myPrs ? "∨" : "›"}</span>
+                <span className="truncate tree-node-title">My Pull Requests</span>
+                <span className="badge badge-dim">4</span>
+              </div>
+              {expandedPrGroups.myPrs && (
+                <ul className="tree-sub-list">
+                  <li className="sidebar-tree-node">
+                    <div className="tree-node-header" onClick={() => togglePrGroup("origin")}>
+                      <span className="caret-icon">{expandedPrGroups.origin ? "∨" : "›"}</span>
+                      <span className="node-icon">🐙</span>
+                      <span className="truncate tree-node-title">origin/repo</span>
+                    </div>
+                    {expandedPrGroups.origin && (
+                      <ul className="tree-items-list">
+                        <li className="tree-item-row">
+                          <span className="pr-status-icon open">○</span>
+                          <span className="truncate pr-title">#780 Updates</span>
+                        </li>
+                        <li className="tree-item-row">
+                          <span className="pr-status-icon open">○</span>
+                          <span className="truncate pr-title">#770 update readme and boards</span>
+                        </li>
+                        <li className="tree-item-row">
+                          <span className="pr-status-icon open">○</span>
+                          <span className="truncate pr-title">#769 Update workspaces</span>
+                        </li>
+                        <li className="tree-item-row">
+                          <span className="pr-status-icon merged">✓</span>
+                          <span className="truncate pr-title">
+                            #757 Editing GitHub pack EDU section…
+                          </span>
+                        </li>
+                      </ul>
+                    )}
+                  </li>
+                </ul>
+              )}
+            </li>
+
+            <li className="sidebar-tree-node">
+              <div className="tree-node-header">
+                <span className="caret-icon">›</span>
+                <span className="truncate tree-node-title">Assigned To Me</span>
+                <span className="badge badge-dim">0</span>
+              </div>
+            </li>
+
+            <li className="sidebar-tree-node">
+              <div className="tree-node-header">
+                <span className="caret-icon">›</span>
+                <span className="truncate tree-node-title">Awaiting My Review</span>
+                <span className="badge badge-dim">0</span>
+              </div>
+            </li>
+
+            <li className="sidebar-tree-node">
+              <div className="tree-node-header">
+                <span className="caret-icon">›</span>
+                <span className="truncate tree-node-title">All Pull Requests</span>
+                <span className="badge badge-dim">4</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <div className="section-label-group">
+              <span className="section-icon">🐙</span>
+              <span className="section-label">GITHUB ISSUES</span>
+            </div>
+          </div>
+          <div className="sidebar-select-wrapper inline-control">
+            <span className="select-inline-label">Repo:</span>
+            <select className="sidebar-select">
+              <option value="">Select…</option>
+              <option value={repo.name}>{repo.name}</option>
+            </select>
+            <span className="sub-filter-icon" title="Filter issues">
+              ⚙
+            </span>
+          </div>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <div className="section-label-group">
+              <span className="section-icon">👥</span>
+              <span className="section-label">TEAMS</span>
+            </div>
+          </div>
+          <div className="sidebar-select-wrapper inline-control">
+            <span className="select-inline-label">Team:</span>
+            <select className="sidebar-select">
+              <option value="Docs Team">Docs Team</option>
+            </select>
+          </div>
+          <ul className="sidebar-list user-team-list">
+            <li className="sidebar-user-block">
+              <div className="user-main-row">
+                <span className="user-avatar-initials green">AL</span>
+                <span className="user-name">Alex L</span>
+                <span className="user-handle">@AlexLatham</span>
+              </div>
+              <div className="user-sub-branch">
+                <span className="branch-icon">⎇</span>
+                <span className="truncate branch-name">support.gitkraken.com updates</span>
+              </div>
+            </li>
+            <li className="sidebar-user-block">
+              <div className="user-main-row">
+                <span className="user-avatar-initials blue">DL</span>
+                <span className="user-name">Diane Lo</span>
+                <span className="user-handle">@diane</span>
+              </div>
+            </li>
+            <li className="sidebar-user-block">
+              <div className="user-main-row">
+                <span className="user-avatar-initials orange">DM</span>
+                <span className="user-name">Dwayne McDaniel</span>
+                <span className="user-handle">@dwaynemc</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <div className="section-label-group">
+              <span className="section-icon">🏷️</span>
+              <span className="section-label">TAGS</span>
+            </div>
+            <div className="section-header-actions">
+              <span className="badge badge-blue-text">1/1</span>
+              <button className="ghost icon-btn-boxed" title="Create Tag">
+                +
+              </button>
+            </div>
+          </div>
+          <ul className="sidebar-list">
+            <li className="sidebar-row">
+              <span className="branch-icon">🏷️</span>
+              <span className="truncate">v1.1.1</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <div className="section-label-group">
+              <span className="section-icon">📦</span>
+              <span className="section-label">SUBMODULES</span>
+            </div>
+            <span className="badge badge-dim">0</span>
+          </div>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <div className="section-label-group">
+              <span className="section-icon">▶️</span>
+              <span className="section-label">GITHUB ACTIONS</span>
+            </div>
+            <span className="badge badge-dim">0</span>
+          </div>
+        </div>
 
         <div className="sidebar-section">
           <div className="sidebar-section-header">
