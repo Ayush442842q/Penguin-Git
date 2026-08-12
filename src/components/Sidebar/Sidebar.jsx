@@ -15,6 +15,14 @@ export default function Sidebar() {
   const [showRemotes, setShowRemotes] = useState(false);
   const [showPatchModal, setShowPatchModal] = useState(false);
   const [showCloudPatches, setShowCloudPatches] = useState(false);
+  const [expandedPrGroups, setExpandedPrGroups] = useState({
+    myPrs: true,
+    origin: true,
+  });
+
+  const togglePrGroup = (key) => {
+    setExpandedPrGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   if (!slice || !slice.repo) return null;
   const repo = slice.repo;
@@ -70,34 +78,95 @@ export default function Sidebar() {
 
         <div className="sidebar-section">
           <div className="sidebar-section-header">
-            <span className="section-label">PULL REQUESTS</span>
-            <button className="ghost" title="New Pull Request">
+            <div className="section-label-group">
+              <span className="section-icon">🔀</span>
+              <span className="section-label">PULL REQUESTS</span>
+            </div>
+            <button className="ghost icon-btn-boxed" title="New Pull Request">
               +
             </button>
           </div>
+
           <div className="sidebar-search-box">
-            <input
-              type="search"
-              placeholder="Search pull requests…"
-              className="sidebar-sub-input"
-            />
+            <div className="sidebar-filter-wrapper">
+              <span className="sub-search-icon">🔍</span>
+              <input
+                type="search"
+                placeholder="Search pull requests"
+                className="sidebar-sub-input"
+              />
+              <span className="sub-filter-icon" title="Filter options">
+                ⚙
+              </span>
+            </div>
           </div>
-          <ul className="sidebar-list">
-            <li className="sidebar-row sub-row">
-              <span className="truncate">My Pull Requests</span>
-              <span className="badge badge-dim">0</span>
+
+          <ul className="sidebar-list tree-list">
+            <li className="sidebar-tree-node">
+              <div className="tree-node-header" onClick={() => togglePrGroup("myPrs")}>
+                <span className="caret-icon">{expandedPrGroups.myPrs ? "∨" : "›"}</span>
+                <span className="truncate tree-node-title">My Pull Requests</span>
+                <span className="badge badge-dim">4</span>
+              </div>
+              {expandedPrGroups.myPrs && (
+                <ul className="tree-sub-list">
+                  <li className="sidebar-tree-node">
+                    <div className="tree-node-header" onClick={() => togglePrGroup("origin")}>
+                      <span className="caret-icon">{expandedPrGroups.origin ? "∨" : "›"}</span>
+                      <span className="node-icon">🐙</span>
+                      <span className="truncate tree-node-title">origin/repo</span>
+                    </div>
+                    {expandedPrGroups.origin && (
+                      <ul className="tree-items-list">
+                        <li className="tree-item-row">
+                          <span className="pr-status-icon open">○</span>
+                          <span className="truncate pr-title">#780 Updates</span>
+                        </li>
+                        <li className="tree-item-row">
+                          <span className="pr-status-icon open">○</span>
+                          <span className="truncate pr-title">
+                            #770 update readme and boards
+                          </span>
+                        </li>
+                        <li className="tree-item-row">
+                          <span className="pr-status-icon open">○</span>
+                          <span className="truncate pr-title">#769 Update workspaces</span>
+                        </li>
+                        <li className="tree-item-row">
+                          <span className="pr-status-icon merged">✓</span>
+                          <span className="truncate pr-title">
+                            #757 Editing GitHub pack EDU section…
+                          </span>
+                        </li>
+                      </ul>
+                    )}
+                  </li>
+                </ul>
+              )}
             </li>
-            <li className="sidebar-row sub-row">
-              <span className="truncate">Assigned To Me</span>
-              <span className="badge badge-dim">0</span>
+
+            <li className="sidebar-tree-node">
+              <div className="tree-node-header">
+                <span className="caret-icon">›</span>
+                <span className="truncate tree-node-title">Assigned To Me</span>
+                <span className="badge badge-dim">0</span>
+              </div>
             </li>
-            <li className="sidebar-row sub-row">
-              <span className="truncate">Awaiting My Review</span>
-              <span className="badge badge-dim">0</span>
+
+            <li className="sidebar-tree-node">
+              <div className="tree-node-header">
+                <span className="caret-icon">›</span>
+                <span className="truncate tree-node-title">Awaiting My Review</span>
+                <span className="badge badge-dim">0</span>
+              </div>
             </li>
-            <li className="sidebar-row sub-row">
-              <span className="truncate">All Pull Requests</span>
-              <span className="badge badge-dim">0</span>
+
+            <li className="sidebar-tree-node">
+              <div className="tree-node-header">
+                <span className="caret-icon">›</span>
+                <span className="truncate tree-node-title">All Pull Requests</span>
+                <span className="badge badge-dim">4</span>
+              </div>
             </li>
           </ul>
         </div>
