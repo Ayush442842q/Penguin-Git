@@ -66,7 +66,11 @@ export default function Sidebar() {
             </button>
           </div>
           <div className="sidebar-search-box">
-            <input type="search" placeholder="Search pull requests…" className="sidebar-sub-input" />
+            <input
+              type="search"
+              placeholder="Search pull requests…"
+              className="sidebar-sub-input"
+            />
           </div>
           <ul className="sidebar-list">
             <li className="sidebar-row sub-row">
@@ -128,7 +132,9 @@ export default function Sidebar() {
         <div className="sidebar-section">
           <div className="sidebar-section-header">
             <span className="section-label">TAGS (1/1)</span>
-            <button className="ghost" title="Create Tag">+</button>
+            <button className="ghost" title="Create Tag">
+              +
+            </button>
           </div>
           <ul className="sidebar-list">
             <li className="sidebar-row">

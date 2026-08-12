@@ -252,9 +252,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(99, 102, 241, 0.12);
-  color: var(--color-accent-light, #818cf8);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: var(--purple-dim);
+  color: var(--accent-orange);
+  border: 1px solid var(--border-strong);
   padding: 3px 8px;
   border-radius: 4px;
   font-size: 11px;
@@ -264,8 +264,8 @@
 }
 
 .ai-compose-btn:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.25);
-  border-color: rgba(99, 102, 241, 0.5);
+  background: var(--bg-hover);
+  border-color: var(--accent-orange);
 }
 
 .ai-compose-btn:disabled {
