@@ -286,6 +286,12 @@ export default function CommitGraph({ style }) {
         />
       </div>
 
+      <div className="graph-column-headers">
+        <span className="col-header branch-tag-col">BRANCH / TAG</span>
+        <span className="col-header graph-col">GRAPH</span>
+        <span className="col-header message-col">COMMIT MESSAGE</span>
+      </div>
+
       <div className="graph-scroll" ref={scrollRef}>
         {rows.length === 0 ? (
           <p className="graph-empty text-muted">
@@ -310,8 +316,6 @@ export default function CommitGraph({ style }) {
                   tabIndex={0}
                   onClick={() => selectCommit(commit.hash)}
                   onKeyDown={(event) => {
-                    // Selecting a commit drives the diff panel, so this is the
-                    // primary workflow — it can't be mouse-only.
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
                       selectCommit(commit.hash);
@@ -319,24 +323,29 @@ export default function CommitGraph({ style }) {
                   }}
                   onContextMenu={(event) => handleContextMenu(event, entry)}
                 >
-                  <svg
-                    className="graph-lanes"
-                    width={graphWidth}
-                    height={ROW_HEIGHT}
-                    aria-hidden="true"
-                  >
-                    <RowGraphics row={row} isWip={isWip} authorName={commit.authorName} />
-                  </svg>
-
-                  <span className="graph-subject truncate">
+                  <div className="branch-tag-col-cell truncate">
                     {(commit.refs || []).map((ref) => (
                       <RefBadge key={ref} name={ref} />
                     ))}
-                    {commit.subject}
-                  </span>
-                  <span className="graph-author truncate text-muted">{commit.authorName}</span>
-                  <span className="graph-date text-dim">{formatTimestamp(commit.timestamp)}</span>
-                  <span className="graph-hash mono text-dim">{commit.shortHash}</span>
+                  </div>
+
+                  <div className="graph-col-cell">
+                    <svg
+                      className="graph-lanes"
+                      width={graphWidth}
+                      height={ROW_HEIGHT}
+                      aria-hidden="true"
+                    >
+                      <RowGraphics row={row} isWip={isWip} authorName={commit.authorName} />
+                    </svg>
+                  </div>
+
+                  <div className="message-col-cell">
+                    <span className="graph-subject truncate">{commit.subject}</span>
+                    <span className="graph-author truncate text-muted">{commit.authorName}</span>
+                    <span className="graph-date text-dim">{formatTimestamp(commit.timestamp)}</span>
+                    <span className="graph-hash mono text-dim">{commit.shortHash}</span>
+                  </div>
                 </div>
               );
             })}
