@@ -50,6 +50,7 @@ function BranchRow({ branch, busy, run, onExplainBranch, onGeneratePr }) {
       onDoubleClick={() => !branch.isRemote && run((path) => git.checkout(path, branch.name))}
     >
       <span className="truncate" title={branch.subject}>
+        <span className="branch-icon">⎇</span>
         {branch.isHead && <span className="branch-head-marker">●</span>}
         {branch.name}
       </span>
@@ -160,10 +161,18 @@ export default function BranchPanel({ filter = "" }) {
   return (
     <div className="sidebar-section">
       <div className="sidebar-section-header">
-        <span className="section-label">
-          LOCAL ({local.length}/{allLocal.length})
-        </span>
-        <button className="ghost" disabled={busy} onClick={() => setCreating((open) => !open)}>
+        <div className="section-label-group">
+          <span className="section-icon">💻</span>
+          <span className="section-label">
+            LOCAL ({local.length}/{allLocal.length})
+          </span>
+        </div>
+        <button
+          className="ghost icon-btn-boxed"
+          disabled={busy}
+          onClick={() => setCreating((open) => !open)}
+          title="Create new branch"
+        >
           +
         </button>
       </div>
@@ -196,9 +205,12 @@ export default function BranchPanel({ filter = "" }) {
       {allRemote.length > 0 && (
         <>
           <div className="sidebar-section-header">
-            <span className="section-label">
-              REMOTE ({remote.length}/{allRemote.length})
-            </span>
+            <div className="section-label-group">
+              <span className="section-icon">☁️</span>
+              <span className="section-label">
+                REMOTE ({remote.length}/{allRemote.length})
+              </span>
+            </div>
           </div>
           <ul className="sidebar-list">
             {remote.map((branch) => (

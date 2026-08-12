@@ -117,9 +117,66 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 9px 12px 5px;
+  padding: 8px 12px 6px;
   background: transparent;
   border: none;
+}
+
+.section-label-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.section-icon {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-blue-text {
+  background: transparent;
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 4px;
+}
+
+.icon-btn-boxed {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  color: var(--text-secondary);
+}
+
+.icon-btn-boxed:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.branch-icon {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-right: 6px;
 }
 
 .sidebar-section-toggle:hover {
