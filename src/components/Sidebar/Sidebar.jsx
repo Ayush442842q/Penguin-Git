@@ -37,20 +37,30 @@ export default function Sidebar() {
 
   return (
     <aside className="sidebar panel">
-      <div className="panel-header">
-        <span className="section-label truncate" title={repo.path}>
-          {repo.name}
-        </span>
+      <div className="panel-header sidebar-top-header">
+        <div className="sidebar-viewing-bar">
+          <button className="ghost icon-btn sidebar-back-btn" title="Back">
+            ‹
+          </button>
+          <span className="sidebar-viewing-text" title={repo.path}>
+            <span className="sidebar-repo-title">{repo.name}</span> Viewing{" "}
+            <span className="viewing-count">101/101</span>
+          </span>
+        </div>
+        <button className="ghost text-btn sidebar-show-all">Show All</button>
       </div>
 
       <div className="sidebar-filter-bar">
-        <input
-          type="search"
-          className="sidebar-filter-input"
-          placeholder="Filter branches & remotes…"
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-        />
+        <div className="sidebar-filter-wrapper">
+          <input
+            type="search"
+            className="sidebar-filter-input"
+            placeholder="Filter (Ctrl + Alt + f)"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+          />
+          <span className="filter-search-icon">🔍</span>
+        </div>
       </div>
 
       <div className="sidebar-scroll">
