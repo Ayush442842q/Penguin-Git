@@ -153,6 +153,19 @@ pub struct GitDiscardFileChangesArgs {
     pub file_path: String,
 }
 
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct GitBlameArgs {
+    pub repo_path: String,
+    pub file_path: String,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct GitFileHistoryArgs {
+    pub repo_path: String,
+    pub file_path: String,
+    pub limit: Option<usize>,
+}
+
 // -- Tool Implementations ----------------------------------------------------
 
 #[tool_router(router = tool_router)]
@@ -360,6 +373,26 @@ impl PenguinMcpServer {
         mcp_event::notify_mcp_mutation("git_discard_file_changes", &args.repo_path).await;
         Ok(format!("Discarded changes to '{}'", args.file_path))
     }
+
+    #[tool(description = "Get line-by-line blame for a file")]
+    pub async fn git_blame(&self, params: Parameters<GitBlameArgs>) -> Result<String, String> {
+        let args = params.0;
+        let path = Path::new(&args.repo_path);
+        let blame_lines = diff::blame(path, &args.file_path).map_err(|e| e.to_string())?;
+        serde_json::to_string_pretty(&blame_lines).map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "Get commit history for a single file following renames")]
+    pub async fn git_file_history(
+        &self,
+        params: Parameters<GitFileHistoryArgs>,
+    ) -> Result<String, String> {
+        let args = params.0;
+        let path = Path::new(&args.repo_path);
+        let limit = args.limit.unwrap_or(100);
+        let commits = diff::file_history(path, &args.file_path, limit).map_err(|e| e.to_string())?;
+        serde_json::to_string_pretty(&commits).map_err(|e| e.to_string())
+    }
 }
 
 #[cfg(test)]
@@ -403,5 +436,36 @@ mod tests {
         assert!(log_res.is_ok());
         let log_json = log_res.unwrap();
         assert!(log_json.contains("initial commit"));
+    }
+
+    #[tokio::test]
+    async fn test_mcp_server_git_blame_and_file_history() {
+        let fixture = FixtureRepo::new();
+        fixture.commit("file.txt", "hello world\n", "initial commit");
+
+        let server = PenguinMcpServer::new();
+        let blame_res = server
+            .git_blame(Parameters(GitBlameArgs {
+                repo_path: fixture.path().to_string_lossy().to_string(),
+                file_path: "file.txt".to_string(),
+            }))
+            .await;
+
+        assert!(blame_res.is_ok());
+        let blame_json = blame_res.unwrap();
+        assert!(blame_json.contains("hello world"));
+        assert!(blame_json.contains("initial commit"));
+
+        let history_res = server
+            .git_file_history(Parameters(GitFileHistoryArgs {
+                repo_path: fixture.path().to_string_lossy().to_string(),
+                file_path: "file.txt".to_string(),
+                limit: Some(5),
+            }))
+            .await;
+
+        assert!(history_res.is_ok());
+        let history_json = history_res.unwrap();
+        assert!(history_json.contains("initial commit"));
     }
 }

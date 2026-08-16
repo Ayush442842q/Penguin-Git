@@ -1,0 +1,72 @@
+{
+  "name": "penguingit-lens",
+  "displayName": "PenguinGit Lens",
+  "description": "Inline blame, commit graph, file history, and hover cards powered by PenguinGit Engine",
+  "version": "0.1.0",
+  "publisher": "penguingit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ayush442842q/Penguin-Git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Git",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "vscode:prepublish": "pnpm build",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "build": "tsc -p ./"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "penguingit.startEngine",
+        "title": "PenguinGit: Start Engine Daemon",
+        "icon": "$(play)"
+      },
+      {
+        "command": "penguingit.checkStatus",
+        "title": "PenguinGit: Check Engine Status",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "penguingit.openDesktop",
+        "title": "PenguinGit: Open in Desktop App",
+        "icon": "$(desktop-download)"
+      }
+    ],
+    "configuration": {
+      "title": "PenguinGit Lens",
+      "properties": {
+        "penguingit.socketPath": {
+          "type": "string",
+          "default": "/tmp/penguingit-mcp.sock",
+          "description": "Path to local PenguinGit Engine Unix domain socket"
+        },
+        "penguingit.tcpPort": {
+          "type": "number",
+          "default": 34284,
+          "description": "TCP port for PenguinGit Engine (used on Windows or fallback)"
+        },
+        "penguingit.useTcp": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force connection over TCP instead of Unix domain socket"
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/vscode": "^1.125.0",
+    "typescript": "^5.4.5"
+  }
+}
